@@ -57,33 +57,40 @@ def transform_format(example):
 dataset = dataset.map(transform_format)
 dataset = standardize_sharegpt(dataset["train"])
 dataset = dataset.map(formatting_prompts_func, batched=True,)
+train_test_split = dataset.train_test_split(test_size=0.1, seed=3407)
+train_dataset = train_test_split['train']
+eval_dataset = train_test_split['test']
 
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
-    train_dataset=dataset,
+    train_dataset=train_dataset,
+    eval_dataset=eval_dataset,
     dataset_text_field="text",
     max_seq_length=max_seq_length,
     data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
     dataset_num_proc=2,
-    packing=False,  # Can make training 5x faster for short sequences.
+    packing=False,
     args=TrainingArguments(
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=4,
         gradient_accumulation_steps=4,
-        warmup_steps=5,
-        # num_train_epochs=1, # Set this for 1 full training run.
-        max_steps=60,
-        learning_rate=2e-4,
+        warmup_steps=100,
+        num_train_epochs=3,
+        # max_steps=1000,
+        learning_rate=1e-4,
         fp16=not is_bfloat16_supported(),
         bf16=is_bfloat16_supported(),
-        logging_steps=1,
+        logging_steps=10,
         optim="adamw_8bit",
         weight_decay=0.01,
-        lr_scheduler_type="linear",
+        lr_scheduler_type="cosine",
         seed=3407,
         output_dir="outputs",
-        report_to="none",  # Use this for WandB etc
-    ),
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        load_best_model_at_end=True,
+        metric_for_best_model="loss",
+    )
 )
 
 trainer = train_on_responses_only(
