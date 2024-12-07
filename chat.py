@@ -16,6 +16,15 @@ load_in_4bit = False  # Use 4bit quantization to reduce memory usage. Can be Fal
 
 ASSISTANT_RESPONSE_EXTRACTION_PATTERN = r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$"
 
+SYSTEM_MESSAGE = "You are a helpful assistant."
+
+
+def init_messages():
+    messages = [
+        {"role": "system", "content": SYSTEM_MESSAGE},
+    ]
+    return messages
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -86,13 +95,18 @@ def chat(checkpoint_path):
     print("\nChat interface started (Press Ctrl+C to exit)")
 
     # Initialize conversation history
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant."}
-    ]
+    messages = init_messages()
 
     while True:
         try:
             user_input = input("\nYou: ")
+            if user_input.strip() == "/exit":
+                print("Chat interface exited.")
+                return
+            elif user_input.strip() == "/new":
+                print("Starting new conversation.")
+                messages = init_messages()
+                continue
             print("\nAssistant:\n")
             # Add user message to history
             messages.append({"role": "user", "content": user_input})
