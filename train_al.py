@@ -46,7 +46,7 @@ tokenizer = get_chat_template(
     chat_template="llama-3.1",
 )
 
-dataset = load_dataset("csv", data_files="test.csv")
+dataset = load_dataset("csv", data_files="compiled.csv")
 def transform_format(example):
     return {
         'conversations': [

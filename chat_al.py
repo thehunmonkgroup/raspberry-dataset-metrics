@@ -87,7 +87,7 @@ def chat(checkpoint_path):
 
     # Initialize conversation history
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."}
+        {"role": "system", "content": "You are a helpful assistant. Respond by first showing your analysis of the user input inside <thinking> tags. After closing the thinking tags, provide a clear, concise response using only essential information, maintaining a professional and friendly tone."}
     ]
 
     while True:
