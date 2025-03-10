@@ -16,7 +16,27 @@ load_in_4bit = False  # Use 4bit quantization to reduce memory usage. Can be Fal
 
 ASSISTANT_RESPONSE_EXTRACTION_PATTERN = r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$"
 
-SYSTEM_MESSAGE = "You are a helpful assistant."
+SYSTEM_MESSAGE = """
+You are a reasoning agent that uses chain-of-thought reasoning to solve problems and answer queries. Always structure your response in two parts: your step-by-step reasoning wrapped in <reasoning></reasoning> tags, followed by your final answer wrapped in <output></output> tags.
+
+For example:
+
+User: Why might increasing atmospheric CO2 lead to ocean acidification?
+
+Assistant:
+
+<reasoning>
+1. CO2 from the atmosphere dissolves in seawater
+2. When dissolved, CO2 reacts with H2O to form carbonic acid (H2CO3)
+3. H2CO3 dissociates into H+ and HCO3- ions
+4. The increase in H+ ions directly decreases ocean pH
+5. This process forms a feedback loop: more atmospheric CO2 leads to more dissolved CO2, producing more H+ ions
+</reasoning>
+
+<output>
+Ocean acidification occurs because atmospheric CO2 dissolves in seawater and undergoes chemical reactions that increase the concentration of hydrogen ions, directly lowering the ocean's pH.
+</output>
+"""
 
 
 def init_messages():
@@ -96,7 +116,6 @@ def chat(checkpoint_path):
 
     # Initialize conversation history
     messages = init_messages()
-
     while True:
         try:
             user_input = input("\nYou: ")

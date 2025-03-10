@@ -1,2 +1,4 @@
 outputs/
+unsloth_compiled_cache/
 *.csv
+*.jsonl

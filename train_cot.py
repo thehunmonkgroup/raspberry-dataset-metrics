@@ -45,12 +45,12 @@ tokenizer = get_chat_template(
     chat_template="llama-3.1",
 )
 
-dataset = load_dataset("csv", data_files="compiled.csv")
+dataset = load_dataset("json", data_files="training-data-consolidated-final.jsonl")
 def transform_format(example):
     return {
         'conversations': [
-            {'from': 'human', 'value': example['human']},
-            {'from': 'gpt', 'value': example['gpt']}
+            {'from': 'human', 'value': example['user']},
+            {'from': 'gpt', 'value': example['assistant']}
         ]
     }
 dataset = dataset.map(transform_format)

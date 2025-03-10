@@ -67,8 +67,8 @@ class CaptureTextStreamer(TextStreamer):
 
 def chat(checkpoint_path):
     from unsloth import FastLanguageModel
-    from peft import PeftModel
     from unsloth.chat_templates import get_chat_template
+    from peft import PeftModel
 
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=base_model_name,
