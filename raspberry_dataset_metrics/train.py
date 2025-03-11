@@ -181,7 +181,7 @@ class Trainer:
         model_settings = self._get_model_family_settings()
         tokenizer = get_chat_template(
             tokenizer,
-            chat_template=model_settings["model_family"],
+            chat_template=model_settings["chat_template"],
         )
 
         return model, tokenizer
