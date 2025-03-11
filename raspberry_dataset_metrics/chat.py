@@ -343,10 +343,14 @@ class Chat:
         self._setup_readline()
 
         # Display welcome header with rich formatting
-        self.console.print(Panel.fit(
-            "Welcome to the AI Chat Interface",
+        self.console.print(Panel(
+            Text("Welcome to the AI Chat Interface", justify="center"),
             border_style="blue",
-            title="Raspberry Dataset Chat"
+            title="Raspberry Dataset Chat",
+            width=self.console.width,
+            expand=True,
+            padding=(1, 2),
+            title_align="center"
         ))
         self.console.print("[info]Special commands:[/info]")
         self.console.print("  [info]/exit[/info] - Quit the chat")
