@@ -78,11 +78,13 @@ class RichTextStreamer(TextStreamer):
         # This is the key change - delegate to parent for display decisions
         super().put(value)
 
-    def on_finalized_text(self, text: str) -> None:
+    def on_finalized_text(self, text: str, stream_end: bool = False) -> None:
         """Process finalized text chunks after prompt skipping.
 
         :param text: Text chunk to process and display
         :type text: str
+        :param stream_end: Flag indicating if this is the final chunk
+        :type stream_end: bool
         """
         # Remove EOS token for display
         display_text = text.replace(self.eos_token, "")
@@ -93,10 +95,14 @@ class RichTextStreamer(TextStreamer):
 
         # Add to our buffer and process tags
         self.buffer += display_text
-        self._process_buffer()
+        self._process_buffer(final=stream_end)
 
-    def _process_buffer(self) -> None:
-        """Process the buffer to detect and format XML tags."""
+    def _process_buffer(self, final: bool = False) -> None:
+        """Process the buffer to detect and format XML tags.
+
+        :param final: Flag indicating if this is the final processing call
+        :type final: bool
+        """
         # Check for opening reasoning tag
         if "<reasoning>" in self.buffer and not self.in_reasoning_tag:
             parts = self.buffer.split("<reasoning>", 1)
@@ -137,7 +143,8 @@ class RichTextStreamer(TextStreamer):
             self.in_output_tag = False
 
         # Print any remaining text with appropriate style if no pending tags
-        if not ("<" in self.buffer and ">" in self.buffer):
+        # Or if this is the final call, print whatever is left in the buffer
+        if final or not ("<" in self.buffer and ">" in self.buffer):
             style = "reasoning" if self.in_reasoning_tag else "output" if self.in_output_tag else None
             # Use Text object instead of styled string
             if self.buffer:
