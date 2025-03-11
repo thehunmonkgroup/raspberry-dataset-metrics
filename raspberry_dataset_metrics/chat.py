@@ -8,16 +8,23 @@ import argparse
 import logging
 import re
 from re import Pattern
-import readline
 import sys
 import yaml
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Iterator
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from rich.theme import Theme
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.styles import Style
+from prompt_toolkit.shortcuts import clear
 
 from unsloth import FastLanguageModel
 from unsloth.chat_templates import get_chat_template
@@ -28,6 +35,44 @@ from transformers import TextStreamer
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
+
+
+class ChatCommandCompleter(Completer):
+    """Completer for chat commands."""
+
+    def __init__(self) -> None:
+        """Initialize the command completer with available commands."""
+        self.commands = [
+            ("/exit", "Quit the chat"),
+            ("/new", "Start a new conversation"),
+            ("/help", "Show available commands"),
+            ("/clear", "Clear the screen"),
+        ]
+
+    def get_completions(
+        self, document: Any, complete_event: Any
+    ) -> Iterator[Completion]:
+        """Get command completions based on current text.
+
+        :param document: Document containing current input
+        :type document: Any
+        :param complete_event: Completion event info
+        :type complete_event: Any
+        :return: Iterator of completions
+        :rtype: Iterator[Completion]
+        """
+        text = document.text_before_cursor.lstrip()
+
+        # Only suggest commands at the start of input
+        if text.startswith("/"):
+            for command, help_text in self.commands:
+                if command.startswith(text):
+                    yield Completion(
+                        command,
+                        start_position=-len(text),
+                        display=command,
+                        display_meta=help_text
+                    )
 
 
 class RichTextStreamer(TextStreamer):
@@ -192,6 +237,7 @@ class Chat:
             "output": "bold white",
         })
         self.console: Console = Console(theme=custom_theme)
+        self.command_completer: ChatCommandCompleter = ChatCommandCompleter()
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
         """Load and merge configuration from YAML with defaults.
@@ -326,11 +372,61 @@ class Chat:
             )
             return None
 
+    def _show_help(self) -> None:
+        """Display help information about available commands."""
+        command_text = "Available Commands:\n\n"
+        for command, help_text in self.command_completer.commands:
+            command_text += f"{command} - {help_text}\n"
 
-    def _setup_readline(self) -> None:
-        """Configure readline with in-memory history for the current session."""
-        readline.set_history_length(1000)
-        self.logger.debug("Readline configured with in-memory history")
+        command_text += "\nMulti-line Input:\n"
+        command_text += "End a line with \\ to continue to the next line\n"
+
+        self.console.print(Panel(
+            Text(command_text, justify="left"),
+            title="Help",
+            border_style="blue"
+        ))
+
+
+    def _setup_prompt_session(self) -> PromptSession:
+        """Configure prompt toolkit session with history and key bindings.
+
+        :return: Configured prompt session
+        :rtype: PromptSession
+        """
+        # Create key bindings with multi-line support
+        kb = KeyBindings()
+
+        @kb.add('enter')
+        def _(event):
+            """Submit on Enter unless Shift is pressed."""
+            if event.current_buffer.document.text.strip().endswith('\\'):
+                # Remove the escape character and add a newline
+                event.current_buffer.document = event.current_buffer.document.cut_selection()
+                event.current_buffer.insert_text('\n')
+            else:
+                event.current_buffer.validate_and_handle()
+
+        # Create style
+        style = Style.from_dict({
+            'prompt': 'cyan bold',
+            'continuation': 'gray italic',
+        })
+
+        # Create and return the session
+        session = PromptSession(
+            history=InMemoryHistory(),
+            completer=self.command_completer,
+            complete_while_typing=True,
+            key_bindings=kb,
+            style=style,
+            multiline=True,
+            mouse_support=True,
+            wrap_lines=True,
+        )
+
+        self.logger.debug("Prompt toolkit session configured")
+        return session
 
     def run(self) -> None:
         """Run the chat interface.
@@ -340,7 +436,7 @@ class Chat:
         self.logger.info("Starting chat interface")
         model, tokenizer = self.load_model()
         self.messages = self.init_messages()
-        self._setup_readline()
+        prompt_session = self._setup_prompt_session()
 
         # Display welcome header with rich formatting
         self.console.print(Panel(
@@ -358,13 +454,29 @@ class Chat:
 
         while True:
             try:
-                user_input = input("\nYou: ")
+                # Get input using prompt_toolkit with HTML formatting
+                user_input = prompt_session.prompt([
+                    ('class:prompt', '\nYou: '),
+                ])
+
+                # Remove trailing backslash used for multi-line input
+                user_input = user_input.rstrip('\\').strip()
+
+                # Handle commands
                 if user_input.strip() == "/exit":
                     self.console.print("[info]Chat interface exited.[/info]")
                     return
                 elif user_input.strip() == "/new":
                     self.console.print("[info]Starting new conversation.[/info]")
                     self.messages = self.init_messages()
+                    continue
+                elif user_input.strip() == "/clear":
+                    clear()
+                    continue
+                elif user_input.strip() == "/help":
+                    self._show_help()
+                    continue
+                elif not user_input.strip():
                     continue
 
                 # Display user message with rich formatting
