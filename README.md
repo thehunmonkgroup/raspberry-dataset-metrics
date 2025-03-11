@@ -28,7 +28,7 @@ pip install ".[dev]"
 Fine-tune models with custom datasets:
 
 ```bash
-raspberry-dataset-metrics-train configs/llama-3.1-8b.yaml dataset.json
+raspberry-train configs/llama-3.1-8b.yaml dataset.json
 ```
 
 ### Chat Interface
@@ -37,10 +37,10 @@ Interact with models (base or fine-tuned):
 
 ```bash
 # Use base model
-raspberry-dataset-metrics-chat configs/phi-4.yaml
+raspberry-chat configs/phi-4.yaml
 
 # Use fine-tuned checkpoint
-raspberry-dataset-metrics-chat configs/phi-4.yaml --checkpoint checkpoint-60
+raspberry-chat configs/phi-4.yaml --checkpoint checkpoint-60
 ```
 
 ## Configuration

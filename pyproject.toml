@@ -34,8 +34,8 @@ where = ["."]
 include = ["raspberry_dataset_metrics"]
 
 [project.scripts]
-raspberry-dataset-metrics-train = "raspberry_dataset_metrics.train:main"
-raspberry-dataset-metrics-chat = "raspberry_dataset_metrics.chat:main"
+raspberry-train = "raspberry_dataset_metrics.train:main"
+raspberry-chat = "raspberry_dataset_metrics.chat:main"
 
 [project.optional-dependencies]
 dev = [
