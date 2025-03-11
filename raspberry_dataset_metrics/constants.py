@@ -83,7 +83,7 @@ MODEL_FAMILIES = {
         "eos_token": "<|eot_id|>",
     },
     "mistral": {
-        "chat_template": "mistral",
+        "chat_template": "chatml",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
