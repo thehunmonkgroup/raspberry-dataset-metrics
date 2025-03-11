@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Universal training script for fine-tuning language models using Unsloth.
@@ -14,7 +13,11 @@ import sys
 from typing import Any
 
 from unsloth import FastLanguageModel, is_bfloat16_supported
-from unsloth.chat_templates import get_chat_template, standardize_sharegpt, train_on_responses_only
+from unsloth.chat_templates import (
+    get_chat_template,
+    standardize_sharegpt,
+    train_on_responses_only,
+)
 from datasets import load_dataset
 from trl import SFTTrainer
 from transformers import TrainingArguments, DataCollatorForSeq2Seq
@@ -26,7 +29,9 @@ from raspberry_dataset_metrics import util
 class Trainer:
     """Main class for fine-tuning language models using configuration from YAML files."""
 
-    def __init__(self, config_path: Path, dataset_file: Path, debug: bool = False) -> None:
+    def __init__(
+        self, config_path: Path, dataset_file: Path, debug: bool = False
+    ) -> None:
         """Initialize trainer with configuration from YAML.
 
         :param config_path: Path to the YAML configuration file
@@ -38,7 +43,9 @@ class Trainer:
         self.dataset_file: Path = dataset_file
         self.config: dict[str, Any] = self._load_config(self.config_path)
         self.logger: logging.Logger = self._setup_logging(debug)
-        self.logger.info(f"Initializing trainer with configuration: {self.config_path}, dataset: {self.dataset_file}")
+        self.logger.info(
+            f"Initializing trainer with configuration: {self.config_path}, dataset: {self.dataset_file}"
+        )
         self.logger.debug(f"Configuration: {self.config}")
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
@@ -94,7 +101,9 @@ class Trainer:
         logger = logging.getLogger("trainer")
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
         handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
@@ -108,7 +117,9 @@ class Trainer:
         """
         model_family = self.config.get("model_family")
         if not model_family or model_family not in constants.MODEL_FAMILIES:
-            raise ValueError("Unsupported or unspecified model family. Please specify 'model_family' in config.")
+            raise ValueError(
+                "Unsupported or unspecified model family. Please specify 'model_family' in config."
+            )
         return constants.MODEL_FAMILIES[model_family]
 
     def _transform_dataset(self, dataset: Any) -> Any:
@@ -121,17 +132,19 @@ class Trainer:
         """
         system_message = self.config.get("system_message", False)
 
-
-        def transform_format(example: dict[str, str]) -> dict[str, list[dict[str, str]]]:
+        def transform_format(
+            example: dict[str, str],
+        ) -> dict[str, list[dict[str, str]]]:
             elements = []
             if system_message:
-                elements.append({'from': 'system', 'value': system_message})
-            elements.append({'from': 'human', 'value': example['user']})
-            elements.append({'from': 'gpt', 'value': example['assistant']})
-            return {'conversations': elements}
+                elements.append({"from": "system", "value": system_message})
+            elements.append({"from": "human", "value": example["user"]})
+            elements.append({"from": "gpt", "value": example["assistant"]})
+            return {"conversations": elements}
 
-
-        dataset = load_dataset("json", data_files=str(self.dataset_file), trust_remote_code=False)
+        dataset = load_dataset(
+            "json", data_files=str(self.dataset_file), trust_remote_code=False
+        )
         dataset = dataset["train"]
         transformed_dataset = dataset.map(transform_format)
         transformed_dataset = standardize_sharegpt(transformed_dataset)
@@ -179,22 +192,29 @@ class Trainer:
         model, tokenizer = self._load_model_and_tokenizer()
         dataset = self._transform_dataset(None)
 
-
         def formatting_prompts_func(examples: dict[str, Any]) -> dict[str, Any]:
             convos = examples["conversations"]
-            texts = [tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False) for convo in convos]
+            texts = [
+                tokenizer.apply_chat_template(
+                    convo, tokenize=False, add_generation_prompt=False
+                )
+                for convo in convos
+            ]
             return {"text": texts}
-
 
         formatted_dataset = dataset.map(formatting_prompts_func, batched=True)
         train_test_split = formatted_dataset.train_test_split(
             test_size=self.config["test_size"],
             seed=self.config["random_seed"],
         )
-        train_dataset = train_test_split['train']
-        eval_dataset = train_test_split['test']
-        self.logger.info(f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}")
-        output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
+        train_dataset = train_test_split["train"]
+        eval_dataset = train_test_split["test"]
+        self.logger.info(
+            f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}"
+        )
+        output_dir = self.config.get(
+            "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
+        )
         Path(output_dir).mkdir(exist_ok=True, parents=True)
         training_args = TrainingArguments(
             per_device_train_batch_size=self.config["per_device_train_batch_size"],
@@ -221,9 +241,13 @@ class Trainer:
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             dataset_text_field="text",  # pyright: ignore[reportCallIssue]
-            max_seq_length=self.config["max_seq_length"],  # pyright: ignore[reportCallIssue]
+            max_seq_length=self.config[
+                "max_seq_length"
+            ],  # pyright: ignore[reportCallIssue]
             data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
-            dataset_num_proc=self.config["dataset_num_proc"],  # pyright: ignore[reportCallIssue]
+            dataset_num_proc=self.config[
+                "dataset_num_proc"
+            ],  # pyright: ignore[reportCallIssue]
             packing=False,  # pyright: ignore[reportCallIssue]
             args=training_args,
         )
@@ -249,19 +273,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train language models with configurations from YAML files"
     )
-    parser.add_argument(
-        "config_file",
-        help="Path to the YAML config file"
-    )
-    parser.add_argument(
-        "dataset_file",
-        help="Path to the dataset file"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging"
-    )
+    parser.add_argument("config_file", help="Path to the YAML config file")
+    parser.add_argument("dataset_file", help="Path to the dataset file")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser.parse_args()
 
 
@@ -283,6 +297,7 @@ def main() -> int:
     except Exception as e:
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

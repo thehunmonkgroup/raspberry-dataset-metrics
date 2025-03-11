@@ -28,7 +28,9 @@ from raspberry_dataset_metrics import util
 class CaptureTextStreamer(TextStreamer):
     """Custom text streamer that captures and displays generated text."""
 
-    def __init__(self, tokenizer: Any, skip_prompt: bool = False, eos_token: str = "") -> None:
+    def __init__(
+        self, tokenizer: Any, skip_prompt: bool = False, eos_token: str = ""
+    ) -> None:
         """Initialize the streamer.
 
         :param tokenizer: The tokenizer to use for decoding
@@ -42,7 +44,7 @@ class CaptureTextStreamer(TextStreamer):
         self.captured_text: list[str] = []
         self.eos_token: str = eos_token
 
-    def put(self, value: Any) -> None:  #pyright: ignore[reportImplicitOverride]
+    def put(self, value: Any) -> None:  # pyright: ignore[reportImplicitOverride]
         """Process and display a token.
 
         :param value: Token or tensor to process
@@ -50,8 +52,12 @@ class CaptureTextStreamer(TextStreamer):
         """
         if torch.is_tensor(value):
             value = value.cpu()
-            text = self.tokenizer.decode(value[0] if value.dim() > 1 else value)  # pyright: ignore[reportAttributeAccessIssue]
-            display_text = text.replace(self.eos_token, "")  # Remove tag for display only
+            text = self.tokenizer.decode(
+                value[0] if value.dim() > 1 else value
+            )  # pyright: ignore[reportAttributeAccessIssue]
+            display_text = text.replace(
+                self.eos_token, ""
+            )  # Remove tag for display only
             if display_text.strip():  # Only display if there's content
                 super().put(value)  # Pass the original tensor to super().put()
             if text.strip():  # Always append original text (with tag) to captured_text
@@ -63,7 +69,9 @@ class CaptureTextStreamer(TextStreamer):
 class Chat:
     """Main class for interacting with fine-tuned language models using configuration from YAML files."""
 
-    def __init__(self, config_path: Path, checkpoint: str | None = None, debug: bool = False) -> None:
+    def __init__(
+        self, config_path: Path, checkpoint: str | None = None, debug: bool = False
+    ) -> None:
         """Initialize chat interface with configuration from YAML.
 
         :param config_path: Path to the YAML configuration file
@@ -83,7 +91,9 @@ class Chat:
         self.logger.debug(f"Configuration: {self.config}")
         self.model_settings: dict[str, Any] = self._get_model_family_settings()
         self.messages: list[dict[str, str]] = []
-        self.response_extraction_pattern: Pattern[str] = re.compile(self.model_settings["response_extraction_pattern"], re.DOTALL)
+        self.response_extraction_pattern: Pattern[str] = re.compile(
+            self.model_settings["response_extraction_pattern"], re.DOTALL
+        )
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
         """Load and merge configuration from YAML with defaults.
@@ -127,7 +137,9 @@ class Chat:
         logger = logging.getLogger("chat")
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
         handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
@@ -141,7 +153,9 @@ class Chat:
         """
         model_family = self.config.get("model_family")
         if not model_family or model_family not in constants.MODEL_FAMILIES:
-            raise ValueError("Unsupported or unspecified model family. Please specify 'model_family' in config.")
+            raise ValueError(
+                "Unsupported or unspecified model family. Please specify 'model_family' in config."
+            )
         settings = constants.MODEL_FAMILIES[model_family].copy()
         return settings
 
@@ -175,13 +189,21 @@ class Chat:
             chat_template=self.model_settings["chat_template"],
         )
         if self.checkpoint:
-            output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
+            output_dir = self.config.get(
+                "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
+            )
             checkpoint_path = Path(output_dir) / self.checkpoint
             if not checkpoint_path.exists():
-                raise FileNotFoundError(f"Error: Checkpoint directory not found: {checkpoint_path}")
+                raise FileNotFoundError(
+                    f"Error: Checkpoint directory not found: {checkpoint_path}"
+                )
             if not (checkpoint_path / "adapter_model.safetensors").exists():
-                raise FileNotFoundError(f"Error: No adapter model found in {checkpoint_path}")
-            self.logger.info(f"Loading adapter weights from checkpoint {checkpoint_path}")
+                raise FileNotFoundError(
+                    f"Error: No adapter model found in {checkpoint_path}"
+                )
+            self.logger.info(
+                f"Loading adapter weights from checkpoint {checkpoint_path}"
+            )
             model = PeftModel.from_pretrained(model, checkpoint_path)
         model = FastLanguageModel.for_inference(model)
         if self.checkpoint:
@@ -201,12 +223,13 @@ class Chat:
         if match:
             return match.group(1).strip()
         else:
-            self.logger.warning(f"Could not extract assistant response from: {response}")
+            self.logger.warning(
+                f"Could not extract assistant response from: {response}"
+            )
             return None
 
     def _setup_readline(self) -> None:
-        """Configure readline with in-memory history for the current session.
-        """
+        """Configure readline with in-memory history for the current session."""
         readline.set_history_length(1000)
         self.logger.debug("Readline configured with in-memory history")
 
@@ -243,9 +266,11 @@ class Chat:
                 text_streamer = CaptureTextStreamer(
                     tokenizer,
                     skip_prompt=True,
-                    eos_token=self.model_settings["eos_token"]
+                    eos_token=self.model_settings["eos_token"],
                 )
-                eos_token_id = tokenizer.convert_tokens_to_ids(self.model_settings["eos_token"])
+                eos_token_id = tokenizer.convert_tokens_to_ids(
+                    self.model_settings["eos_token"]
+                )
                 _ = model.generate(
                     input_ids=inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
@@ -259,9 +284,11 @@ class Chat:
                 response = "".join(text_streamer.captured_text)
                 assistant_response = self.process_response(response)
                 if assistant_response:
-                    self.messages.append({"role": "assistant", "content": assistant_response})
+                    self.messages.append(
+                        {"role": "assistant", "content": assistant_response}
+                    )
             except KeyboardInterrupt:
-                print('\nExiting chat interface')
+                print("\nExiting chat interface")
                 sys.exit(0)
 
 
@@ -274,19 +301,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Chat interface for fine-tuned language models"
     )
+    parser.add_argument("config_file", help="Path to the YAML config file")
     parser.add_argument(
-        "config_file",
-        help="Path to the YAML config file"
+        "--checkpoint", help="Checkpoint directory (e.g., 'checkpoint-60')"
     )
-    parser.add_argument(
-        "--checkpoint",
-        help="Checkpoint directory (e.g., 'checkpoint-60')"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging"
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser.parse_args()
 
 
@@ -305,6 +324,7 @@ def main() -> int:
     except Exception as e:
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

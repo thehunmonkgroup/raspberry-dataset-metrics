@@ -13,7 +13,15 @@ LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
 LORA_RANK = 16
 LORA_ALPHA = 16
 LORA_DROPOUT = 0
-TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+TARGET_MODULES = [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj",
+]
 RANDOM_SEED = 3407
 USE_RSLORA = False
 
@@ -64,20 +72,20 @@ MODEL_FAMILIES = {
         "instruction_part": "<|im_start|>user<|im_sep|>",
         "response_part": "<|im_start|>assistant<|im_sep|>",
         "response_extraction_pattern": r".*<\|im_start\|>assistant<\|im_sep\|>([\s\S]*?)<\|im_end\|>$",
-        "eos_token": "<|im_end|>"
+        "eos_token": "<|im_end|>",
     },
     "llama-3.1": {
         "chat_template": "llama-3.1",
         "instruction_part": "<|start_header_id|>user<|end_header_id|>\n\n",
         "response_part": "<|start_header_id|>assistant<|end_header_id|>\n\n",
         "response_extraction_pattern": r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$",
-        "eos_token": "<|eot_id|>"
+        "eos_token": "<|eot_id|>",
     },
     "qwen-2.5": {
         "chat_template": "qwen2.5",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
-        "eos_token": "<|im_end|>"
-    }
+        "eos_token": "<|im_end|>",
+    },
 }
