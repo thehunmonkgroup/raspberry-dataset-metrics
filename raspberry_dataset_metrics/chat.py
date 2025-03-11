@@ -14,6 +14,11 @@ import yaml
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.theme import Theme
+
 from unsloth import FastLanguageModel
 from unsloth.chat_templates import get_chat_template
 from peft.peft_model import PeftModel
@@ -25,13 +30,13 @@ from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
 
 
-class CaptureTextStreamer(TextStreamer):
-    """Custom text streamer that captures and displays generated text."""
+class RichTextStreamer(TextStreamer):
+    """Custom text streamer that applies Rich formatting while streaming."""
 
     def __init__(
-        self, tokenizer: Any, skip_prompt: bool = False, eos_token: str = ""
+        self, tokenizer: Any, skip_prompt: bool = False, eos_token: str = "", console: Console | None = None
     ) -> None:
-        """Initialize the streamer.
+        """Initialize the streamer with Rich console integration.
 
         :param tokenizer: The tokenizer to use for decoding
         :type tokenizer: Any
@@ -39,31 +44,93 @@ class CaptureTextStreamer(TextStreamer):
         :type skip_prompt: bool
         :param eos_token: End of sequence token to handle in display
         :type eos_token: str
+        :param console: Rich console instance for formatted output
+        :type console: Console
         """
         super().__init__(tokenizer, skip_prompt)
+        self.console: Console = console or Console()
         self.captured_text: list[str] = []
         self.eos_token: str = eos_token
+        self.buffer: str = ""
+        self.in_reasoning_tag: bool = False
+        self.in_output_tag: bool = False
 
     def put(self, value: Any) -> None:  # pyright: ignore[reportImplicitOverride]
-        """Process and display a token.
+        """Process, format, and display a token with Rich styling.
 
         :param value: Token or tensor to process
         :type value: Any
         """
-        if torch.is_tensor(value):
-            value = value.cpu()
-            text = self.tokenizer.decode(
-                value[0] if value.dim() > 1 else value
-            )  # pyright: ignore[reportAttributeAccessIssue]
-            display_text = text.replace(
-                self.eos_token, ""
-            )  # Remove tag for display only
-            if display_text.strip():  # Only display if there's content
-                super().put(value)  # Pass the original tensor to super().put()
-            if text.strip():  # Always append original text (with tag) to captured_text
-                self.captured_text.append(text)
-        else:
-            super().put(value)
+        if not torch.is_tensor(value):
+            return super().put(value)
+
+        value = value.cpu()
+        text = self.tokenizer.decode(  # pyright: ignore[reportAttributeAccessIssue]
+            value[0] if value.dim() > 1 else value
+        )
+
+        # Remove EOS token
+        display_text = text.replace(self.eos_token, "")
+
+        # Skip empty tokens
+        if not display_text.strip():
+            return
+
+        # Store the raw text for later use
+        if text.strip():
+            self.captured_text.append(text)
+
+        # Add to our buffer and process
+        self.buffer += display_text
+
+        # Process tags in the buffer
+        self._process_buffer()
+
+    def _process_buffer(self) -> None:
+        """Process the buffer to detect and format XML tags."""
+        # Check for opening reasoning tag
+        if "<reasoning>" in self.buffer and not self.in_reasoning_tag:
+            parts = self.buffer.split("<reasoning>", 1)
+            # Print text before tag
+            if parts[0]:
+                self.console.print(parts[0], end="")
+            self.console.print("\n[REASONING]\n", style="reasoning", end="")
+            self.buffer = parts[1]
+            self.in_reasoning_tag = True
+
+        # Check for closing reasoning tag
+        if "</reasoning>" in self.buffer and self.in_reasoning_tag:
+            parts = self.buffer.split("</reasoning>", 1)
+            # Print reasoning content
+            self.console.print(parts[0], style="reasoning", end="")
+            self.console.print("\n[/REASONING]\n", style="reasoning", end="")
+            self.buffer = parts[1]
+            self.in_reasoning_tag = False
+
+        # Check for opening output tag
+        if "<output>" in self.buffer and not self.in_output_tag:
+            parts = self.buffer.split("<output>", 1)
+            # Print text before tag
+            if parts[0]:
+                self.console.print(parts[0], end="")
+            self.console.print("\n[OUTPUT]\n", style="output", end="")
+            self.buffer = parts[1]
+            self.in_output_tag = True
+
+        # Check for closing output tag
+        if "</output>" in self.buffer and self.in_output_tag:
+            parts = self.buffer.split("</output>", 1)
+            # Print output content
+            self.console.print(parts[0], style="output", end="")
+            self.console.print("\n[/OUTPUT]\n", style="output", end="")
+            self.buffer = parts[1]
+            self.in_output_tag = False
+
+        # Print any remaining text with appropriate style if no pending tags
+        if not ("<" in self.buffer and ">" in self.buffer):
+            style = "reasoning" if self.in_reasoning_tag else "output" if self.in_output_tag else None
+            self.console.print(self.buffer, style=style, end="")
+            self.buffer = ""
 
 
 class Chat:
@@ -94,6 +161,18 @@ class Chat:
         self.response_extraction_pattern: Pattern[str] = re.compile(
             self.model_settings["response_extraction_pattern"], re.DOTALL
         )
+
+        # Setup Rich console for formatted output
+        custom_theme = Theme({
+            "user": "bold cyan",
+            "assistant": "bold green",
+            "system": "bold yellow",
+            "info": "bold blue",
+            "warning": "bold red",
+            "reasoning": "italic yellow",
+            "output": "bold white",
+        })
+        self.console: Console = Console(theme=custom_theme)
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
         """Load and merge configuration from YAML with defaults.
@@ -228,6 +307,7 @@ class Chat:
             )
             return None
 
+
     def _setup_readline(self) -> None:
         """Configure readline with in-memory history for the current session."""
         readline.set_history_length(1000)
@@ -242,19 +322,36 @@ class Chat:
         model, tokenizer = self.load_model()
         self.messages = self.init_messages()
         self._setup_readline()
-        print("\nChat interface started (Press Ctrl+C to exit)")
-        print("Special commands: /exit to quit, /new to start a new conversation")
+
+        # Display welcome header with rich formatting
+        self.console.print(Panel.fit(
+            "Welcome to the AI Chat Interface",
+            border_style="blue",
+            title="Raspberry Dataset Chat"
+        ))
+        self.console.print("[info]Special commands:[/info]")
+        self.console.print("  [info]/exit[/info] - Quit the chat")
+        self.console.print("  [info]/new[/info]  - Start a new conversation")
+
         while True:
             try:
                 user_input = input("\nYou: ")
                 if user_input.strip() == "/exit":
-                    print("Chat interface exited.")
+                    self.console.print("[info]Chat interface exited.[/info]")
                     return
                 elif user_input.strip() == "/new":
-                    print("Starting new conversation.")
+                    self.console.print("[info]Starting new conversation.[/info]")
                     self.messages = self.init_messages()
                     continue
-                print("\nAssistant:\n")
+
+                # Display user message with rich formatting
+                self.console.print(Panel(
+                    Text(user_input),
+                    border_style="cyan",
+                    title="You"
+                ))
+
+                self.console.print("\n[assistant]Assistant:[/assistant]")
                 self.messages.append({"role": "user", "content": user_input})
                 inputs = tokenizer.apply_chat_template(
                     self.messages,
@@ -263,10 +360,11 @@ class Chat:
                     return_tensors="pt",
                     return_dict=True,
                 ).to("cuda")
-                text_streamer = CaptureTextStreamer(
+                text_streamer = RichTextStreamer(
                     tokenizer,
                     skip_prompt=True,
                     eos_token=self.model_settings["eos_token"],
+                    console=self.console
                 )
                 eos_token_id = tokenizer.convert_tokens_to_ids(
                     self.model_settings["eos_token"]
@@ -284,11 +382,12 @@ class Chat:
                 response = "".join(text_streamer.captured_text)
                 assistant_response = self.process_response(response)
                 if assistant_response:
+                    # No need for additional formatting since it's already displayed during streaming
                     self.messages.append(
                         {"role": "assistant", "content": assistant_response}
                     )
             except KeyboardInterrupt:
-                print("\nExiting chat interface")
+                self.console.print("\n[warning]Exiting chat interface[/warning]")
                 sys.exit(0)
 
 
