@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raspberry-dataset-metrics"
+version = "0.1.0"
+description = "A package for generating metrics for raspberry datasets."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name="Chad Phillips", email="chad@apartmentlines.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["raspberry_dataset_metrics"]
+
+[project.scripts]
+raspberry-dataset-metrics-train = "raspberry_dataset_metrics.train:main"
+raspberry-dataset-metrics-chat = "raspberry_dataset_metrics.chat:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+    "pyright",
+]
