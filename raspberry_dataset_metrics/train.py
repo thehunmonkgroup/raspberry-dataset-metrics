@@ -82,6 +82,7 @@ class Trainer:
                 "scheduler_type": constants.SCHEDULER_TYPE,
                 "test_size": constants.TRAIN_TEST_SPLIT_SIZE,
                 "system_message": constants.SYSTEM_MESSAGE,
+                "format_with_eos_token": constants.FORMAT_WITH_EOS_TOKEN,
             }
             merged_config.update(config)
             if type(merged_config["learning_rate"]) is str:
@@ -194,12 +195,14 @@ class Trainer:
 
         def formatting_prompts_func(examples: dict[str, Any]) -> dict[str, Any]:
             convos = examples["conversations"]
-            texts = [
-                tokenizer.apply_chat_template(
+            texts = []
+            for convo in convos:
+                text = tokenizer.apply_chat_template(
                     convo, tokenize=False, add_generation_prompt=False
                 )
-                for convo in convos
-            ]
+                if self.config["format_with_eos_token"]:
+                    text += tokenizer.eos_token
+                texts.append(text)
             return {"text": texts}
 
         formatted_dataset = dataset.map(formatting_prompts_func, batched=True)

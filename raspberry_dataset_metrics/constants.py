@@ -32,10 +32,11 @@ WARMUP_STEPS = 100
 NUM_TRAIN_EPOCHS = 3
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0.01
-LOGGING_STEPS = 10
+LOGGING_STEPS = 1
 DATASET_NUM_PROC = 2
 SCHEDULER_TYPE = "cosine"
 TRAIN_TEST_SPLIT_SIZE = 0.1
+FORMAT_WITH_EOS_TOKEN = False
 
 # System message
 SYSTEM_MESSAGE = """
@@ -81,8 +82,15 @@ MODEL_FAMILIES = {
         "response_extraction_pattern": r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$",
         "eos_token": "<|eot_id|>",
     },
+    "mistral": {
+        "chat_template": "mistral",
+        "instruction_part": "<|im_start|>user\n",
+        "response_part": "<|im_start|>assistant\n",
+        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
+        "eos_token": "<|im_end|>",
+    },
     "qwen-2.5": {
-        "chat_template": "qwen2.5",
+        "chat_template": "qwen-2.5",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",

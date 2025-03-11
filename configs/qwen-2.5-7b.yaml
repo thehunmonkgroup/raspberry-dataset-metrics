@@ -1,2 +1,5 @@
 model_name: "unsloth/Qwen2.5-7B"
 model_family: "qwen-2.5"
+
+# Optional overrides
+format_with_eos_token: True

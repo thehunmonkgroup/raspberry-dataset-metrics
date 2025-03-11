@@ -1,0 +1,6 @@
+model_name: "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
+model_family: "mistral"
+
+# Optional overrides
+warmup_steps: 5
+scheduler_type: "linear"

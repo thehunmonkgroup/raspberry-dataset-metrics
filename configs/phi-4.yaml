@@ -4,5 +4,4 @@ model_family: "phi-4"
 # Optional overrides
 warmup_steps: 5
 learning_rate: 2e-4
-logging_steps: 1
 scheduler_type: "linear"
