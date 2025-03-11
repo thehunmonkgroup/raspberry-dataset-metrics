@@ -31,10 +31,10 @@ from raspberry_dataset_metrics import util
 
 
 class RichTextStreamer(TextStreamer):
-    """Custom text streamer that applies Rich formatting while streaming."""
+    """Custom text streamer that formats and displays model output with Rich styling."""
 
     def __init__(
-        self, tokenizer: Any, skip_prompt: bool = False, eos_token: str = "", console: Console | None = None
+        self, tokenizer: Any, skip_prompt: bool = True, eos_token: str = "", console: Console | None = None
     ) -> None:
         """Initialize the streamer with Rich console integration.
 
@@ -47,15 +47,14 @@ class RichTextStreamer(TextStreamer):
         :param console: Rich console instance for formatted output
         :type console: Console
         """
-        super().__init__(tokenizer, skip_prompt)
+        # Always skip prompt - we only want to display the assistant's response
+        super().__init__(tokenizer, skip_prompt=True)
         self.console: Console = console or Console()
         self.captured_text: list[str] = []
         self.eos_token: str = eos_token
         self.buffer: str = ""
         self.in_reasoning_tag: bool = False
         self.in_output_tag: bool = False
-        # Add flag to skip until assistant's section
-        self.skip_until_assistant: bool = True
 
     def put(self, value: Any) -> None:  # pyright: ignore[reportImplicitOverride]
         """Process, format, and display a token with Rich styling.
@@ -64,7 +63,7 @@ class RichTextStreamer(TextStreamer):
         :type value: Any
         """
         if not torch.is_tensor(value):
-            return super().put(value)
+            return
 
         value = value.cpu()
         text = self.tokenizer.decode(  # pyright: ignore[reportAttributeAccessIssue]
@@ -74,35 +73,17 @@ class RichTextStreamer(TextStreamer):
         # Remove EOS token
         display_text = text.replace(self.eos_token, "")
 
-        # Store the raw text for later use (always capture everything)
+        # Store the raw text for later use
         if text.strip():
             self.captured_text.append(text)
 
         # Skip empty tokens
         if not display_text.strip():
             return
-            
-        # If we're skipping until assistant section, check if we've reached it
-        if self.skip_until_assistant:
-            if "<|im_start|>assistant" in self.buffer + display_text:
-                # We've found the assistant section marker, extract only what comes after
-                parts = (self.buffer + display_text).split("<|im_start|>assistant", 1)
-                if len(parts) > 1:
-                    self.buffer = parts[1]
-                else:
-                    self.buffer = ""
-                self.skip_until_assistant = False
-            else:
-                # Still in system/user message, just add to buffer but don't display
-                self.buffer += display_text
-                return
 
-        # Now we're in the assistant section, proceed with normal processing
-        if not self.skip_until_assistant:
-            # Add to our buffer and process
-            self.buffer += display_text
-            # Process tags in the buffer
-            self._process_buffer()
+        # Add to our buffer and process tags
+        self.buffer += display_text
+        self._process_buffer()
 
     def _process_buffer(self) -> None:
         """Process the buffer to detect and format XML tags."""
@@ -111,7 +92,7 @@ class RichTextStreamer(TextStreamer):
             parts = self.buffer.split("<reasoning>", 1)
             # Print text before tag
             if parts[0]:
-                self.console.print(parts[0], end="")
+                self.console.print(Text(parts[0]), end="")
             # Use Text object to avoid markup parsing
             self.console.print(Text("\nREASONING\n", style="reasoning"), end="")
             self.buffer = parts[1]
@@ -131,7 +112,7 @@ class RichTextStreamer(TextStreamer):
             parts = self.buffer.split("<output>", 1)
             # Print text before tag
             if parts[0]:
-                self.console.print(parts[0], end="")
+                self.console.print(Text(parts[0]), end="")
             self.console.print(Text("\nOUTPUT\n", style="output"), end="")
             self.buffer = parts[1]
             self.in_output_tag = True
@@ -372,8 +353,19 @@ class Chat:
                     title="You"
                 ))
 
-                self.console.print("\n[assistant]Assistant:[/assistant]")
+                # Add the user message to history
                 self.messages.append({"role": "user", "content": user_input})
+
+                # Create panel for assistant's response
+                assistant_panel = Panel(
+                    "",
+                    border_style="green",
+                    title="Assistant",
+                    title_align="left"
+                )
+                self.console.print(assistant_panel)
+
+                # Prepare inputs for the model
                 inputs = tokenizer.apply_chat_template(
                     self.messages,
                     tokenize=True,
@@ -381,9 +373,10 @@ class Chat:
                     return_tensors="pt",
                     return_dict=True,
                 ).to("cuda")
+
+                # Create streamer that will handle assistant's response
                 text_streamer = RichTextStreamer(
                     tokenizer,
-                    skip_prompt=True,
                     eos_token=self.model_settings["eos_token"],
                     console=self.console
                 )
