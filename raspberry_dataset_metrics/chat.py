@@ -522,7 +522,7 @@ class Chat:
             padding=(1, 2),
             title_align="center"
         ))
-        self.console.print("[info]type /help to list commands[/info]")
+        self.console.print("[info]Type /help to list commands[/info]")
 
         while True:
             try:
