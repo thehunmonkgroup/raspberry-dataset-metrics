@@ -11,7 +11,8 @@ from re import Pattern
 import sys
 import yaml
 from pathlib import Path
-from typing import Any, List, Iterator
+from typing import Any
+from collections.abc import Iterator
 
 from rich.console import Console
 from rich.panel import Panel
@@ -21,7 +22,6 @@ from rich.theme import Theme
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.completion import Completer, Completion
-from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import clear
@@ -42,7 +42,7 @@ class ChatCommandCompleter(Completer):
 
     def __init__(self) -> None:
         """Initialize the command completer with available commands."""
-        self.commands = [
+        self.commands: list[tuple[str, str]] = [
             ("/exit", "Quit the chat"),
             ("/new", "Start a new conversation"),
             ("/help", "Show available commands"),
@@ -51,7 +51,7 @@ class ChatCommandCompleter(Completer):
             ("/system", "View or modify system message (e.g., /system New message)"),
         ]
 
-    def get_completions(
+    def get_completions(  # pyright: ignore[reportImplicitOverride]
         self, document: Any, complete_event: Any
     ) -> Iterator[Completion]:
         """Get command completions based on current text.
@@ -125,7 +125,7 @@ class RichTextStreamer(TextStreamer):
         # This is the key change - delegate to parent for display decisions
         super().put(value)
 
-    def on_finalized_text(self, text: str, stream_end: bool = False) -> None:
+    def on_finalized_text(self, text: str, stream_end: bool = False) -> None:  # pyright: ignore[reportImplicitOverride]
         """Process finalized text chunks after prompt skipping.
 
         :param text: Text chunk to process and display
@@ -192,7 +192,7 @@ class RichTextStreamer(TextStreamer):
         # Print any remaining text with appropriate style if no pending tags
         # Or if this is the final call, print whatever is left in the buffer
         if final or not ("<" in self.buffer and ">" in self.buffer):
-            style = "reasoning" if self.in_reasoning_tag else "output" if self.in_output_tag else None
+            style = "reasoning" if self.in_reasoning_tag else "output" if self.in_output_tag else ""
             # Use Text object instead of styled string
             if self.buffer:
                 self.console.print(Text(self.buffer, style=style), end="")
@@ -449,7 +449,7 @@ class Chat:
         self.console.print("[info]System message updated successfully[/info]")
 
 
-    def _setup_prompt_session(self) -> PromptSession:
+    def _setup_prompt_session(self) -> PromptSession[Any]:
         """Configure prompt toolkit session with history and key bindings.
 
         :return: Configured prompt session
@@ -459,12 +459,25 @@ class Chat:
         kb = KeyBindings()
 
         @kb.add('enter')
-        def _(event):
+        def _(event: Any) -> None:
             """Submit on Enter unless Shift is pressed."""
             if event.current_buffer.document.text.strip().endswith('\\'):
-                # Remove the escape character and add a newline
-                event.current_buffer.document = event.current_buffer.document.cut_selection()
-                event.current_buffer.insert_text('\n')
+                # Get current text and cursor position
+                text = event.current_buffer.text
+                position = event.current_buffer.cursor_position
+
+                # Find where the backslash is relative to the cursor
+                line_end_pos = text.rfind('\\', 0, position)
+                if line_end_pos >= 0:
+                    # Remove backslash and add newline
+                    new_text = text[:line_end_pos] + '\n' + text[line_end_pos+1:]
+                    event.current_buffer.text = new_text
+
+                    # Move cursor to after the newline
+                    event.current_buffer.cursor_position = line_end_pos + 1
+                else:
+                    # Fallback: just add a newline at cursor
+                    event.current_buffer.insert_text('\n')
             else:
                 event.current_buffer.validate_and_handle()
 
