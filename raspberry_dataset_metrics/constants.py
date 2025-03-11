@@ -62,16 +62,22 @@ MODEL_FAMILIES = {
     "phi-4": {
         "chat_template": "phi-4",
         "instruction_part": "<|im_start|>user<|im_sep|>",
-        "response_part": "<|im_start|>assistant<|im_sep|>"
+        "response_part": "<|im_start|>assistant<|im_sep|>",
+        "response_extraction_pattern": r".*<\|im_start\|>assistant<\|im_sep\|>([\s\S]*?)<\|im_end\|>$",
+        "eos_token": "<|im_end|>"
     },
     "llama-3.1": {
         "chat_template": "llama-3.1",
         "instruction_part": "<|start_header_id|>user<|end_header_id|>\n\n",
-        "response_part": "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        "response_part": "<|start_header_id|>assistant<|end_header_id|>\n\n",
+        "response_extraction_pattern": r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$",
+        "eos_token": "<|eot_id|>"
     },
     "qwen-2.5": {
         "chat_template": "qwen2.5",
         "instruction_part": "<|im_start|>user\n",
-        "response_part": "<|im_start|>assistant\n"
+        "response_part": "<|im_start|>assistant\n",
+        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
+        "eos_token": "<|im_end|>"
     }
 }

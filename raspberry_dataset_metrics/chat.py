@@ -144,7 +144,7 @@ class Chat:
         """Get model-specific settings based on the model family.
 
         :return: Dictionary of model-specific settings
-        :rtype: Dict[str, Any]
+        :rtype: dict[str, Any]
         :raises ValueError: If model family is not supported
         """
         model_family = self.config.get("model_family")
@@ -152,19 +152,8 @@ class Chat:
         if not model_family or model_family not in constants.MODEL_FAMILIES:
             raise ValueError("Unsupported or unspecified model family. Please specify 'model_family' in config.")
 
-        # Get base settings from constants
+        # Get settings from constants
         settings = constants.MODEL_FAMILIES[model_family].copy()
-
-        # Add response extraction pattern
-        if model_family == "phi-4":
-            settings["response_extraction_pattern"] = r".*<\|im_start\|>assistant<\|im_sep\|>([\s\S]*?)<\|im_end\|>$"
-            settings["eos_token"] = "<|im_end|>"
-        elif model_family == "llama-3.1":
-            settings["response_extraction_pattern"] = r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$"
-            settings["eos_token"] = "<|eot_id|>"
-        elif model_family == "qwen-2.5":
-            settings["response_extraction_pattern"] = r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$"
-            settings["eos_token"] = "<|im_end|>"
 
         return settings
 
@@ -198,7 +187,7 @@ class Chat:
 
         tokenizer = get_chat_template(
             tokenizer,
-            chat_template=self.model_settings["model_family"],
+            chat_template=self.model_settings["chat_template"],
         )
 
         if self.checkpoint:
