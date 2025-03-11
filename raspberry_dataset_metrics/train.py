@@ -16,11 +16,12 @@ from unsloth import FastLanguageModel, is_bfloat16_supported
 from unsloth.chat_templates import (
     get_chat_template,
     standardize_sharegpt,
-    train_on_responses_only,
+    # train_on_responses_only,
 )
 from datasets import load_dataset
 from trl import SFTTrainer
-from transformers import TrainingArguments, DataCollatorForSeq2Seq
+from transformers import TrainingArguments
+# from transformers import TrainingArguments, DataCollatorForSeq2Seq
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
@@ -244,13 +245,13 @@ class Trainer:
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             dataset_text_field="text",  # pyright: ignore[reportCallIssue]
-            max_seq_length=self.config[
+            max_seq_length=self.config[  # pyright: ignore[reportCallIssue]
                 "max_seq_length"
-            ],  # pyright: ignore[reportCallIssue]
-            data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
-            dataset_num_proc=self.config[
+            ],
+            # data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
+            dataset_num_proc=self.config[  # pyright: ignore[reportCallIssue]
                 "dataset_num_proc"
-            ],  # pyright: ignore[reportCallIssue]
+            ],
             packing=False,  # pyright: ignore[reportCallIssue]
             args=training_args,
         )
