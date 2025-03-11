@@ -479,24 +479,13 @@ class Chat:
                 elif not user_input.strip():
                     continue
 
-                # Display user message with rich formatting
-                self.console.print(Panel(
-                    Text(user_input),
-                    border_style="cyan",
-                    title="You"
-                ))
-
-                # Add the user message to history
+                # Add the user message to history (no need to display again)
                 self.messages.append({"role": "user", "content": user_input})
 
-                # Create panel for assistant's response
-                assistant_panel = Panel(
-                    "",
-                    border_style="green",
-                    title="Assistant",
-                    title_align="left"
-                )
-                self.console.print(assistant_panel)
+                # Display assistant indicator with appropriate styling
+                self.console.print()  # Add spacing
+                self.console.print("[assistant]Assistant:[/assistant]")
+                self.console.print()  # Add spacing
 
                 # Prepare inputs for the model
                 inputs = tokenizer.apply_chat_template(
