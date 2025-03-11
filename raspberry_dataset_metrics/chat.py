@@ -63,19 +63,29 @@ class RichTextStreamer(TextStreamer):
         :type value: Any
         """
         if not torch.is_tensor(value):
-            return
+            return super().put(value)
 
         value = value.cpu()
         text = self.tokenizer.decode(  # pyright: ignore[reportAttributeAccessIssue]
             value[0] if value.dim() > 1 else value
         )
 
-        # Remove EOS token
-        display_text = text.replace(self.eos_token, "")
-
-        # Store the raw text for later use
+        # Store the raw text for capturing full output
         if text.strip():
             self.captured_text.append(text)
+
+        # Let the parent class handle prompt skipping
+        # This is the key change - delegate to parent for display decisions
+        super().put(value)
+
+    def on_finalized_text(self, text: str) -> None:
+        """Process finalized text chunks after prompt skipping.
+
+        :param text: Text chunk to process and display
+        :type text: str
+        """
+        # Remove EOS token for display
+        display_text = text.replace(self.eos_token, "")
 
         # Skip empty tokens
         if not display_text.strip():
