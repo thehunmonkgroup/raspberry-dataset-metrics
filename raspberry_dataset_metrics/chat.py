@@ -448,9 +448,7 @@ class Chat:
             padding=(1, 2),
             title_align="center"
         ))
-        self.console.print("[info]Special commands:[/info]")
-        self.console.print("  [info]/exit[/info] - Quit the chat")
-        self.console.print("  [info]/new[/info]  - Start a new conversation")
+        self.console.print("[info]type /help to list commands[/info]")
 
         while True:
             try:
