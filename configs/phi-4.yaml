@@ -1,10 +1,7 @@
-# Configuration for Phi-4 CoT training
 model_name: "unsloth/phi-4-unsloth-bnb-4bit"
 model_family: "phi-4"
 
 # Optional overrides
-per_device_train_batch_size: 2
-gradient_accumulation_steps: 4
 warmup_steps: 5
 learning_rate: 2e-4
 logging_steps: 1

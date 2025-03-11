@@ -1,11 +1,7 @@
-# Configuration for Qwen 2.5 training
 model_name: "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"
 model_family: "qwen-2.5"
 
 # Optional overrides
-per_device_train_batch_size: 2
-gradient_accumulation_steps: 4
 warmup_steps: 50
-num_train_epochs: 2
-learning_rate: 1.5e-4
+num_train_epochs: 3
 scheduler_type: "cosine"

@@ -1,0 +1,2 @@
+model_name: "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit"
+model_family: "llama-3.1"
