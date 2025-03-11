@@ -20,6 +20,7 @@ from trl import SFTTrainer
 from transformers import TrainingArguments, DataCollatorForSeq2Seq
 
 from raspberry_dataset_metrics import constants
+from raspberry_dataset_metrics import util
 
 
 class Trainer:
@@ -33,11 +34,11 @@ class Trainer:
         :param dataset_file: Path to the dataset file
         :type dataset_file: Path
         """
-        self.config: dict[str, Any] = self._load_config(config_path)
+        self.config_path: Path = config_path
         self.dataset_file: Path = dataset_file
+        self.config: dict[str, Any] = self._load_config(self.config_path)
         self.logger: logging.Logger = self._setup_logging(debug)
-        self.training_type: str = self.config.get("training_type", "default")
-        self.logger.info(f"Initializing trainer with type: {self.training_type}")
+        self.logger.info(f"Initializing trainer with configuration: {self.config_path}, dataset: {self.dataset_file}")
         self.logger.debug(f"Configuration: {self.config}")
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
@@ -180,7 +181,7 @@ class Trainer:
         model_settings = self._get_model_family_settings()
         tokenizer = get_chat_template(
             tokenizer,
-            chat_template=model_settings["chat_template"],
+            chat_template=model_settings["model_family"],
         )
 
         return model, tokenizer
@@ -217,7 +218,7 @@ class Trainer:
         self.logger.info(f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}")
 
         # Create output directory if it doesn't exist
-        output_dir = self.config.get("output_dir", f"outputs/{self.training_type}")
+        output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
         Path(output_dir).mkdir(exist_ok=True, parents=True)
 
         training_args = TrainingArguments(
