@@ -54,6 +54,8 @@ class RichTextStreamer(TextStreamer):
         self.buffer: str = ""
         self.in_reasoning_tag: bool = False
         self.in_output_tag: bool = False
+        # Add flag to skip until assistant's section
+        self.skip_until_assistant: bool = True
 
     def put(self, value: Any) -> None:  # pyright: ignore[reportImplicitOverride]
         """Process, format, and display a token with Rich styling.
@@ -72,19 +74,35 @@ class RichTextStreamer(TextStreamer):
         # Remove EOS token
         display_text = text.replace(self.eos_token, "")
 
-        # Skip empty tokens
-        if not display_text.strip():
-            return
-
-        # Store the raw text for later use
+        # Store the raw text for later use (always capture everything)
         if text.strip():
             self.captured_text.append(text)
 
-        # Add to our buffer and process
-        self.buffer += display_text
+        # Skip empty tokens
+        if not display_text.strip():
+            return
+            
+        # If we're skipping until assistant section, check if we've reached it
+        if self.skip_until_assistant:
+            if "<|im_start|>assistant" in self.buffer + display_text:
+                # We've found the assistant section marker, extract only what comes after
+                parts = (self.buffer + display_text).split("<|im_start|>assistant", 1)
+                if len(parts) > 1:
+                    self.buffer = parts[1]
+                else:
+                    self.buffer = ""
+                self.skip_until_assistant = False
+            else:
+                # Still in system/user message, just add to buffer but don't display
+                self.buffer += display_text
+                return
 
-        # Process tags in the buffer
-        self._process_buffer()
+        # Now we're in the assistant section, proceed with normal processing
+        if not self.skip_until_assistant:
+            # Add to our buffer and process
+            self.buffer += display_text
+            # Process tags in the buffer
+            self._process_buffer()
 
     def _process_buffer(self) -> None:
         """Process the buffer to detect and format XML tags."""
@@ -94,16 +112,17 @@ class RichTextStreamer(TextStreamer):
             # Print text before tag
             if parts[0]:
                 self.console.print(parts[0], end="")
-            self.console.print("\n[REASONING]\n", style="reasoning", end="")
+            # Use Text object to avoid markup parsing
+            self.console.print(Text("\nREASONING\n", style="reasoning"), end="")
             self.buffer = parts[1]
             self.in_reasoning_tag = True
 
         # Check for closing reasoning tag
         if "</reasoning>" in self.buffer and self.in_reasoning_tag:
             parts = self.buffer.split("</reasoning>", 1)
-            # Print reasoning content
-            self.console.print(parts[0], style="reasoning", end="")
-            self.console.print("\n[/REASONING]\n", style="reasoning", end="")
+            # Print reasoning content with Text object
+            self.console.print(Text(parts[0], style="reasoning"), end="")
+            self.console.print(Text("\n/REASONING\n", style="reasoning"), end="")
             self.buffer = parts[1]
             self.in_reasoning_tag = False
 
@@ -113,24 +132,26 @@ class RichTextStreamer(TextStreamer):
             # Print text before tag
             if parts[0]:
                 self.console.print(parts[0], end="")
-            self.console.print("\n[OUTPUT]\n", style="output", end="")
+            self.console.print(Text("\nOUTPUT\n", style="output"), end="")
             self.buffer = parts[1]
             self.in_output_tag = True
 
         # Check for closing output tag
         if "</output>" in self.buffer and self.in_output_tag:
             parts = self.buffer.split("</output>", 1)
-            # Print output content
-            self.console.print(parts[0], style="output", end="")
-            self.console.print("\n[/OUTPUT]\n", style="output", end="")
+            # Print output content with Text object
+            self.console.print(Text(parts[0], style="output"), end="")
+            self.console.print(Text("\n/OUTPUT\n", style="output"), end="")
             self.buffer = parts[1]
             self.in_output_tag = False
 
         # Print any remaining text with appropriate style if no pending tags
         if not ("<" in self.buffer and ">" in self.buffer):
             style = "reasoning" if self.in_reasoning_tag else "output" if self.in_output_tag else None
-            self.console.print(self.buffer, style=style, end="")
-            self.buffer = ""
+            # Use Text object instead of styled string
+            if self.buffer:
+                self.console.print(Text(self.buffer, style=style), end="")
+                self.buffer = ""
 
 
 class Chat:
