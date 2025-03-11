@@ -254,12 +254,12 @@ class Trainer:
             packing=False,  # pyright: ignore[reportCallIssue]
             args=training_args,
         )
-        model_settings = self._get_model_family_settings()
-        trainer = train_on_responses_only(
-            trainer,
-            instruction_part=model_settings["instruction_part"],
-            response_part=model_settings["response_part"],
-        )
+        # model_settings = self._get_model_family_settings()
+        # trainer = train_on_responses_only(
+        #     trainer,
+        #     instruction_part=model_settings["instruction_part"],
+        #     response_part=model_settings["response_part"],
+        # )
         self.logger.info("Starting training")
         training_stats = trainer.train()
         self.logger.info("Training completed")
