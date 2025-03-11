@@ -19,13 +19,13 @@ from datasets import load_dataset
 from trl import SFTTrainer
 from transformers import TrainingArguments, DataCollatorForSeq2Seq
 
-import constants
+from raspberry_dataset_metrics import constants
 
 
 class Trainer:
     """Main class for fine-tuning language models using configuration from YAML files."""
 
-    def __init__(self, config_path: Path, dataset_file: Path) -> None:
+    def __init__(self, config_path: Path, dataset_file: Path, debug: bool = False) -> None:
         """Initialize trainer with configuration from YAML.
 
         :param config_path: Path to the YAML configuration file
@@ -35,7 +35,7 @@ class Trainer:
         """
         self.config: dict[str, Any] = self._load_config(config_path)
         self.dataset_file: Path = dataset_file
-        self.logger: logging.Logger = self._setup_logging()
+        self.logger: logging.Logger = self._setup_logging(debug)
         self.training_type: str = self.config.get("training_type", "default")
         self.logger.info(f"Initializing trainer with type: {self.training_type}")
         self.logger.debug(f"Configuration: {self.config}")
@@ -80,6 +80,8 @@ class Trainer:
 
             # Override with values from config file
             merged_config.update(config)
+            if type(merged_config["learning_rate"]) is str:
+                merged_config["learning_rate"] = float(merged_config["learning_rate"])
 
             return merged_config
         except FileNotFoundError:
@@ -87,14 +89,14 @@ class Trainer:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in config file: {e}")
 
-    def _setup_logging(self) -> logging.Logger:
+    def _setup_logging(self, debug: bool) -> logging.Logger:
         """Configure logging for the trainer.
 
         :return: Configured logger
         :rtype: logging.Logger
         """
         logger = logging.getLogger("trainer")
-        logger.setLevel(logging.DEBUG if self.config.get("debug", False) else logging.INFO)
+        logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
         handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -138,7 +140,7 @@ class Trainer:
 
 
         # Load the dataset
-        dataset = load_dataset("json", data_files=self.dataset_file)["train"]
+        dataset = load_dataset("json", data_files=str(self.dataset_file))["train"]
 
         # Transform and process the dataset
         transformed_dataset = dataset.map(transform_format)
@@ -306,7 +308,7 @@ def main() -> int:
         dataset_file = Path(args.dataset_file)
 
         # Initialize and run trainer
-        trainer = Trainer(config_path, dataset_file)
+        trainer = Trainer(config_path, dataset_file, args.debug)
         stats = trainer.train()
 
         # Print training stats
