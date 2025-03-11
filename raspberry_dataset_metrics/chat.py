@@ -47,6 +47,8 @@ class ChatCommandCompleter(Completer):
             ("/new", "Start a new conversation"),
             ("/help", "Show available commands"),
             ("/clear", "Clear the screen"),
+            ("/temp", "View or adjust temperature (e.g., /temp 0.7)"),
+            ("/system", "View or modify system message (e.g., /system New message)"),
         ]
 
     def get_completions(
@@ -387,6 +389,65 @@ class Chat:
             border_style="blue"
         ))
 
+    def _adjust_temperature(self, args: str | None = None) -> None:
+        """Display or adjust model temperature setting.
+
+        :param args: Optional temperature value
+        :type args: str | None
+        """
+        if not args:
+            # Display current temperature
+            self.console.print(f"[info]Current temperature: {self.config['temperature']}[/info]")
+            return
+
+        try:
+            temp = float(args.strip())
+            if temp <= 0:
+                self.console.print("[warning]Temperature must be a positive number[/warning]")
+                return
+
+            # Update temperature in config
+            self.config['temperature'] = temp
+            self.console.print(f"[info]Temperature updated to: {temp}[/info]")
+        except ValueError:
+            self.console.print("[warning]Invalid temperature value. Please provide a positive number.[/warning]")
+
+    def _manage_system_message(self, args: str | None = None) -> None:
+        """Display or modify the system message.
+
+        :param args: New system message text
+        :type args: str | None
+        """
+        # Find system message in conversation history
+        system_idx = None
+        for idx, msg in enumerate(self.messages):
+            if msg["role"] == "system":
+                system_idx = idx
+                break
+
+        if not args:
+            # Display current system message
+            system_message = self.messages[system_idx]["content"] if system_idx is not None else "No system message set"
+            self.console.print(Panel(
+                Text(system_message),
+                title="Current System Message",
+                border_style="yellow"
+            ))
+            return
+
+        # Update system message
+        new_system_message = args.strip()
+        if system_idx is not None:
+            # Update existing system message
+            self.messages[system_idx]["content"] = new_system_message
+        else:
+            # Add new system message at the beginning
+            self.messages.insert(0, {"role": "system", "content": new_system_message})
+
+        # Update in config too for future new conversations
+        self.config["system_message"] = new_system_message
+        self.console.print("[info]System message updated successfully[/info]")
+
 
     def _setup_prompt_session(self) -> PromptSession:
         """Configure prompt toolkit session with history and key bindings.
@@ -461,20 +522,29 @@ class Chat:
                 user_input = user_input.rstrip('\\').strip()
 
                 # Handle commands
-                if user_input.strip() == "/exit":
+                user_input = user_input.strip()
+                if user_input == "/exit":
                     self.console.print("[info]Chat interface exited.[/info]")
                     return
-                elif user_input.strip() == "/new":
+                elif user_input == "/new":
                     self.console.print("[info]Starting new conversation.[/info]")
                     self.messages = self.init_messages()
                     continue
-                elif user_input.strip() == "/clear":
+                elif user_input == "/clear":
                     clear()
                     continue
-                elif user_input.strip() == "/help":
+                elif user_input == "/help":
                     self._show_help()
                     continue
-                elif not user_input.strip():
+                elif user_input.startswith("/temp"):
+                    args = user_input[5:].strip() if len(user_input) > 5 else None
+                    self._adjust_temperature(args)
+                    continue
+                elif user_input.startswith("/system"):
+                    args = user_input[7:].strip() if len(user_input) > 7 else None
+                    self._manage_system_message(args)
+                    continue
+                elif not user_input:
                     continue
 
                 # Add the user message to history (no need to display again)
