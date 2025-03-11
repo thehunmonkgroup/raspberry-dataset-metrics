@@ -52,6 +52,11 @@ Ocean acidification occurs because atmospheric CO2 dissolves in seawater and und
 </output>
 """
 
+# Generation parameters
+TEMPERATURE = 0.1
+MIN_P = 0.1
+MAX_NEW_TOKENS = 1024
+
 # Model-specific settings
 MODEL_FAMILIES = {
     "phi-4": {
