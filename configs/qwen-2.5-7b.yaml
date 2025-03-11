@@ -1,7 +1,2 @@
-model_name: "unsloth/Qwen2.5-7B-Instruct-bnb-4bit"
+model_name: "unsloth/Qwen2.5-7B"
 model_family: "qwen-2.5"
-
-# Optional overrides
-warmup_steps: 50
-num_train_epochs: 3
-scheduler_type: "cosine"
