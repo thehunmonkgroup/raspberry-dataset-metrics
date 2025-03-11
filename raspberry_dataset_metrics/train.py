@@ -54,8 +54,6 @@ class Trainer:
         try:
             with open(config_path, "r") as file:
                 config = yaml.safe_load(file)
-
-            # Start with defaults from constants
             merged_config = {
                 "max_seq_length": constants.MAX_SEQ_LENGTH,
                 "dtype": constants.DTYPE,
@@ -78,12 +76,9 @@ class Trainer:
                 "test_size": constants.TRAIN_TEST_SPLIT_SIZE,
                 "system_message": constants.SYSTEM_MESSAGE,
             }
-
-            # Override with values from config file
             merged_config.update(config)
             if type(merged_config["learning_rate"]) is str:
                 merged_config["learning_rate"] = float(merged_config["learning_rate"])
-
             return merged_config
         except FileNotFoundError:
             raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -98,12 +93,10 @@ class Trainer:
         """
         logger = logging.getLogger("trainer")
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
-
         handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-
         return logger
 
     def _get_model_family_settings(self) -> dict[str, Any]:
@@ -114,10 +107,8 @@ class Trainer:
         :raises ValueError: If model family is not supported
         """
         model_family = self.config.get("model_family")
-
         if not model_family or model_family not in constants.MODEL_FAMILIES:
             raise ValueError("Unsupported or unspecified model family. Please specify 'model_family' in config.")
-
         return constants.MODEL_FAMILIES[model_family]
 
     def _transform_dataset(self, dataset: Any) -> Any:
@@ -140,13 +131,10 @@ class Trainer:
             return {'conversations': elements}
 
 
-        # Load the dataset
-        dataset = load_dataset("json", data_files=str(self.dataset_file))["train"]
-
-        # Transform and process the dataset
+        dataset = load_dataset("json", data_files=str(self.dataset_file), trust_remote_code=False)
+        dataset = dataset["train"]
         transformed_dataset = dataset.map(transform_format)
         transformed_dataset = standardize_sharegpt(transformed_dataset)
-
         return transformed_dataset
 
     def _load_model_and_tokenizer(self) -> tuple[Any, Any]:
@@ -156,14 +144,12 @@ class Trainer:
         :rtype: tuple
         """
         self.logger.info(f"Loading model: {self.config['model_name']}")
-
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.config["model_name"],
             max_seq_length=self.config["max_seq_length"],
             dtype=self.config["dtype"],
             load_in_4bit=self.config["load_in_4bit"],
         )
-
         model = FastLanguageModel.get_peft_model(
             model,
             r=self.config["lora_rank"],
@@ -171,19 +157,16 @@ class Trainer:
             lora_alpha=self.config["lora_alpha"],
             lora_dropout=self.config["lora_dropout"],
             bias="none",
-            use_gradient_checkpointing="unsloth",
+            use_gradient_checkpointing="unsloth",  # pyright: ignore[reportArgumentType]
             random_state=self.config["random_seed"],
             use_rslora=self.config["use_rslora"],
             loftq_config=None,
         )
-
-        # Set the chat template based on model family
         model_settings = self._get_model_family_settings()
         tokenizer = get_chat_template(
             tokenizer,
             chat_template=model_settings["chat_template"],
         )
-
         return model, tokenizer
 
     def train(self) -> dict[str, Any]:
@@ -193,20 +176,16 @@ class Trainer:
         :rtype: Dict[str, Any]
         """
         self.logger.info("Starting training process")
-
-        # Load model and tokenizer
         model, tokenizer = self._load_model_and_tokenizer()
-
-        # Load and transform dataset
         dataset = self._transform_dataset(None)
 
-        # Create formatting function for the dataset
+
         def formatting_prompts_func(examples: dict[str, Any]) -> dict[str, Any]:
             convos = examples["conversations"]
             texts = [tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False) for convo in convos]
             return {"text": texts}
 
-        # Apply formatting and split dataset
+
         formatted_dataset = dataset.map(formatting_prompts_func, batched=True)
         train_test_split = formatted_dataset.train_test_split(
             test_size=self.config["test_size"],
@@ -214,13 +193,9 @@ class Trainer:
         )
         train_dataset = train_test_split['train']
         eval_dataset = train_test_split['test']
-
         self.logger.info(f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}")
-
-        # Create output directory if it doesn't exist
         output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
         Path(output_dir).mkdir(exist_ok=True, parents=True)
-
         training_args = TrainingArguments(
             per_device_train_batch_size=self.config["per_device_train_batch_size"],
             gradient_accumulation_steps=self.config["gradient_accumulation_steps"],
@@ -240,35 +215,28 @@ class Trainer:
             load_best_model_at_end=True,
             metric_for_best_model="loss",
         )
-
-        # Create SFT trainer
         trainer = SFTTrainer(
             model=model,
-            tokenizer=tokenizer,
+            tokenizer=tokenizer,  # pyright: ignore[reportCallIssue]
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            dataset_text_field="text",
-            max_seq_length=self.config["max_seq_length"],
+            dataset_text_field="text",  # pyright: ignore[reportCallIssue]
+            max_seq_length=self.config["max_seq_length"],  # pyright: ignore[reportCallIssue]
             data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
-            dataset_num_proc=self.config["dataset_num_proc"],
-            packing=False,
+            dataset_num_proc=self.config["dataset_num_proc"],  # pyright: ignore[reportCallIssue]
+            packing=False,  # pyright: ignore[reportCallIssue]
             args=training_args,
         )
-
-        # Apply response-only training
         model_settings = self._get_model_family_settings()
         trainer = train_on_responses_only(
             trainer,
             instruction_part=model_settings["instruction_part"],
             response_part=model_settings["response_part"],
         )
-
-        # Start training
-        self.logger.info("Starting trainer.train()")
+        self.logger.info("Starting training")
         training_stats = trainer.train()
         self.logger.info("Training completed")
         self.logger.debug(f"Training stats: {training_stats}")
-
         return training_stats
 
 
@@ -307,15 +275,10 @@ def main() -> int:
         args = parse_args()
         config_path = Path(args.config_file)
         dataset_file = Path(args.dataset_file)
-
-        # Initialize and run trainer
         trainer = Trainer(config_path, dataset_file, args.debug)
         stats = trainer.train()
-
-        # Print training stats
         print("\nTraining completed. Stats:")
         pprint.pprint(stats)
-
         return 0
     except Exception as e:
         print(f"Error: {e}")

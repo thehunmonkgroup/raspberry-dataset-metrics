@@ -16,7 +16,7 @@ from typing import Any
 
 from unsloth import FastLanguageModel
 from unsloth.chat_templates import get_chat_template
-from peft import PeftModel
+from peft.peft_model import PeftModel
 
 import torch
 from transformers import TextStreamer
@@ -42,7 +42,7 @@ class CaptureTextStreamer(TextStreamer):
         self.captured_text: list[str] = []
         self.eos_token: str = eos_token
 
-    def put(self, value: Any) -> None:
+    def put(self, value: Any) -> None:  #pyright: ignore[reportImplicitOverride]
         """Process and display a token.
 
         :param value: Token or tensor to process
@@ -50,7 +50,7 @@ class CaptureTextStreamer(TextStreamer):
         """
         if torch.is_tensor(value):
             value = value.cpu()
-            text = self.tokenizer.decode(value[0] if value.dim() > 1 else value)
+            text = self.tokenizer.decode(value[0] if value.dim() > 1 else value)  # pyright: ignore[reportAttributeAccessIssue]
             display_text = text.replace(self.eos_token, "")  # Remove tag for display only
             if display_text.strip():  # Only display if there's content
                 super().put(value)  # Pass the original tensor to super().put()
@@ -69,7 +69,7 @@ class Chat:
         :param config_path: Path to the YAML configuration file
         :type config_path: Path
         :param checkpoint: Checkpoint directory
-        :type checkpoint_path: str | None
+        :type checkpoint: str | None
         :param debug: Enable debug logging
         :type debug: bool
         """
@@ -77,12 +77,10 @@ class Chat:
         self.checkpoint: str | None = checkpoint
         self.config: dict[str, Any] = self._load_config(self.config_path)
         self.logger: logging.Logger = self._setup_logging(debug)
-
         self.logger.info(f"Initializing chat with configuration: {self.config_path}")
         if self.checkpoint:
             self.logger.info(f"Using checkpoint: {self.checkpoint}")
         self.logger.debug(f"Configuration: {self.config}")
-
         self.model_settings: dict[str, Any] = self._get_model_family_settings()
         self.messages: list[dict[str, str]] = []
         self.response_extraction_pattern: Pattern[str] = re.compile(self.model_settings["response_extraction_pattern"], re.DOTALL)
@@ -100,8 +98,6 @@ class Chat:
         try:
             with open(config_path, "r") as file:
                 config = yaml.safe_load(file)
-
-            # Start with defaults
             merged_config = {
                 "model_name": "",
                 "model_family": "",
@@ -113,10 +109,7 @@ class Chat:
                 "min_p": constants.MIN_P,
                 "max_new_tokens": constants.MAX_NEW_TOKENS,
             }
-
-            # Override with values from config file
             merged_config.update(config)
-
             return merged_config
         except FileNotFoundError:
             raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -133,12 +126,10 @@ class Chat:
         """
         logger = logging.getLogger("chat")
         logger.setLevel(logging.DEBUG if debug else logging.INFO)
-
         handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-
         return logger
 
     def _get_model_family_settings(self) -> dict[str, Any]:
@@ -149,13 +140,9 @@ class Chat:
         :raises ValueError: If model family is not supported
         """
         model_family = self.config.get("model_family")
-
         if not model_family or model_family not in constants.MODEL_FAMILIES:
             raise ValueError("Unsupported or unspecified model family. Please specify 'model_family' in config.")
-
-        # Get settings from constants
         settings = constants.MODEL_FAMILIES[model_family].copy()
-
         return settings
 
     def init_messages(self) -> list[dict[str, str]]:
@@ -176,23 +163,18 @@ class Chat:
         :return: Tuple of (model, tokenizer)
         :rtype: tuple[Any, Any]
         """
-
         self.logger.info(f"Loading model: {self.config['model_name']}")
-
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.config["model_name"],
             max_seq_length=self.config["max_seq_length"],
             dtype=self.config["dtype"],
             load_in_4bit=self.config["load_in_4bit"],
         )
-
         tokenizer = get_chat_template(
             tokenizer,
             chat_template=self.model_settings["chat_template"],
         )
-
         if self.checkpoint:
-
             output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
             checkpoint_path = Path(output_dir) / self.checkpoint
             if not checkpoint_path.exists():
@@ -201,14 +183,10 @@ class Chat:
                 raise FileNotFoundError(f"Error: No adapter model found in {checkpoint_path}")
             self.logger.info(f"Loading adapter weights from checkpoint {checkpoint_path}")
             model = PeftModel.from_pretrained(model, checkpoint_path)
-
-        # Convert to inference mode
         model = FastLanguageModel.for_inference(model)
-
         if self.checkpoint:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model = model.to(device)
-
         return model, tokenizer
 
     def process_response(self, response: str) -> str | None:
@@ -229,7 +207,6 @@ class Chat:
     def _setup_readline(self) -> None:
         """Configure readline with in-memory history for the current session.
         """
-        # Set history length for current session
         readline.set_history_length(1000)
         self.logger.debug("Readline configured with in-memory history")
 
@@ -239,19 +216,11 @@ class Chat:
         :raises Exception: If model loading or inference fails
         """
         self.logger.info("Starting chat interface")
-
-        # Load model and tokenizer
         model, tokenizer = self.load_model()
-
-        # Initialize messages
         self.messages = self.init_messages()
-
-        # Set up readline for better input handling
         self._setup_readline()
-
         print("\nChat interface started (Press Ctrl+C to exit)")
         print("Special commands: /exit to quit, /new to start a new conversation")
-
         while True:
             try:
                 user_input = input("\nYou: ")
@@ -262,13 +231,8 @@ class Chat:
                     print("Starting new conversation.")
                     self.messages = self.init_messages()
                     continue
-
                 print("\nAssistant:\n")
-
-                # Add user message to history
                 self.messages.append({"role": "user", "content": user_input})
-
-                # Prepare input for the model
                 inputs = tokenizer.apply_chat_template(
                     self.messages,
                     tokenize=True,
@@ -276,15 +240,11 @@ class Chat:
                     return_tensors="pt",
                     return_dict=True,
                 ).to("cuda")
-
-                # Configure text streamer
                 text_streamer = CaptureTextStreamer(
                     tokenizer,
                     skip_prompt=True,
                     eos_token=self.model_settings["eos_token"]
                 )
-
-                # Generate response
                 eos_token_id = tokenizer.convert_tokens_to_ids(self.model_settings["eos_token"])
                 _ = model.generate(
                     input_ids=inputs["input_ids"],
@@ -296,15 +256,10 @@ class Chat:
                     temperature=self.config["temperature"],
                     min_p=self.config["min_p"],
                 )
-
-                # Process full response
                 response = "".join(text_streamer.captured_text)
                 assistant_response = self.process_response(response)
-
-                # Update message history if successful
                 if assistant_response:
                     self.messages.append({"role": "assistant", "content": assistant_response})
-
             except KeyboardInterrupt:
                 print('\nExiting chat interface')
                 sys.exit(0)
@@ -344,11 +299,8 @@ def main() -> int:
     try:
         args = parse_args()
         config_path = Path(args.config_file)
-
-        # Initialize and run chat interface
         chat = Chat(config_path, args.checkpoint, args.debug)
         chat.run()
-
         return 0
     except Exception as e:
         print(f"Error: {e}")
