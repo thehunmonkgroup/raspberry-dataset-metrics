@@ -8,6 +8,7 @@ import argparse
 import logging
 import re
 from re import Pattern
+import readline
 import sys
 import yaml
 from pathlib import Path
@@ -73,7 +74,7 @@ class Chat:
         :type debug: bool
         """
         self.config_path: Path = config_path
-        self.checkpoint: Path | None = checkpoint
+        self.checkpoint: str | None = checkpoint
         self.config: dict[str, Any] = self._load_config(self.config_path)
         self.logger: logging.Logger = self._setup_logging(debug)
 
@@ -195,11 +196,9 @@ class Chat:
             output_dir = self.config.get("output_dir", f"outputs/{util.get_config_base_name(self.config_path)}")
             checkpoint_path = Path(output_dir) / self.checkpoint
             if not checkpoint_path.exists():
-                print(f"Error: Checkpoint directory not found: {checkpoint_path}")
-                return 1
+                raise FileNotFoundError(f"Error: Checkpoint directory not found: {checkpoint_path}")
             if not (checkpoint_path / "adapter_model.safetensors").exists():
-                print(f"Error: No adapter model found in {checkpoint_path}")
-                return 1
+                raise FileNotFoundError(f"Error: No adapter model found in {checkpoint_path}")
             self.logger.info(f"Loading adapter weights from checkpoint {checkpoint_path}")
             model = PeftModel.from_pretrained(model, checkpoint_path)
 
@@ -227,6 +226,13 @@ class Chat:
             self.logger.warning(f"Could not extract assistant response from: {response}")
             return None
 
+    def _setup_readline(self) -> None:
+        """Configure readline with in-memory history for the current session.
+        """
+        # Set history length for current session
+        readline.set_history_length(1000)
+        self.logger.debug("Readline configured with in-memory history")
+
     def run(self) -> None:
         """Run the chat interface.
 
@@ -239,6 +245,9 @@ class Chat:
 
         # Initialize messages
         self.messages = self.init_messages()
+
+        # Set up readline for better input handling
+        self._setup_readline()
 
         print("\nChat interface started (Press Ctrl+C to exit)")
         print("Special commands: /exit to quit, /new to start a new conversation")
