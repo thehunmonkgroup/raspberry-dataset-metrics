@@ -35,6 +35,7 @@ from transformers import TextStreamer
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
+from .logger import Logger
 
 
 class ChatCommandCompleter(Completer):
@@ -217,11 +218,11 @@ class Chat:
         self.config_path: Path = config_path
         self.checkpoint: str | None = checkpoint
         self.config: dict[str, Any] = self._load_config(self.config_path)
-        self.logger: logging.Logger = self._setup_logging(debug)
-        self.logger.info(f"Initializing chat with configuration: {self.config_path}")
+        self.log: logging.Logger = Logger(self.__class__.__name__, debug=debug)
+        self.log.info(f"Initializing chat with configuration: {self.config_path}")
         if self.checkpoint:
-            self.logger.info(f"Using checkpoint: {self.checkpoint}")
-        self.logger.debug(f"Configuration: {self.config}")
+            self.log.info(f"Using checkpoint: {self.checkpoint}")
+        self.log.debug(f"Configuration: {self.config}")
         self.model_settings: dict[str, Any] = self._get_model_family_settings()
         self.messages: list[dict[str, str]] = []
         self.response_extraction_pattern: Pattern[str] = re.compile(
@@ -272,24 +273,6 @@ class Chat:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in config file: {e}")
 
-    def _setup_logging(self, debug: bool) -> logging.Logger:
-        """Configure logging for the chat interface.
-
-        :param debug: Enable debug logging
-        :type debug: bool
-        :return: Configured logger
-        :rtype: logging.Logger
-        """
-        logger = logging.getLogger("chat")
-        logger.setLevel(logging.DEBUG if debug else logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
-
     def _get_model_family_settings(self) -> dict[str, Any]:
         """Get model-specific settings based on the model family.
 
@@ -323,7 +306,7 @@ class Chat:
         :return: Tuple of (model, tokenizer)
         :rtype: tuple[Any, Any]
         """
-        self.logger.info(f"Loading model: {self.config['model_name']}")
+        self.log.info(f"Loading model: {self.config['model_name']}")
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.config["model_name"],
             max_seq_length=self.config["max_seq_length"],
@@ -347,7 +330,7 @@ class Chat:
                 raise FileNotFoundError(
                     f"Error: No adapter model found in {checkpoint_path}"
                 )
-            self.logger.info(
+            self.log.info(
                 f"Loading adapter weights from checkpoint {checkpoint_path}"
             )
             model = PeftModel.from_pretrained(model, checkpoint_path)
@@ -369,7 +352,7 @@ class Chat:
         if match:
             return match.group(1).strip()
         else:
-            self.logger.warning(
+            self.log.warning(
                 f"Could not extract assistant response from: {response}"
             )
             return None
@@ -499,7 +482,7 @@ class Chat:
             wrap_lines=True,
         )
 
-        self.logger.debug("Prompt toolkit session configured")
+        self.log.debug("Prompt toolkit session configured")
         return session
 
     def run(self) -> None:
@@ -507,7 +490,7 @@ class Chat:
 
         :raises Exception: If model loading or inference fails
         """
-        self.logger.info("Starting chat interface")
+        self.log.info("Starting chat interface")
         model, tokenizer = self.load_model()
         self.messages = self.init_messages()
         prompt_session = self._setup_prompt_session()

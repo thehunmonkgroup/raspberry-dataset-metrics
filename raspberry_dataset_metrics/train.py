@@ -25,6 +25,7 @@ from transformers import TrainingArguments
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
+from .logger import Logger
 
 
 class Trainer:
@@ -43,11 +44,11 @@ class Trainer:
         self.config_path: Path = config_path
         self.dataset_file: Path = dataset_file
         self.config: dict[str, Any] = self._load_config(self.config_path)
-        self.logger: logging.Logger = self._setup_logging(debug)
-        self.logger.info(
+        self.log: logging.Logger = Logger(self.__class__.__name__, debug=debug)
+        self.log.info(
             f"Initializing trainer with configuration: {self.config_path}, dataset: {self.dataset_file}"
         )
-        self.logger.debug(f"Configuration: {self.config}")
+        self.log.debug(f"Configuration: {self.config}")
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
         """Load and merge configuration from YAML with defaults.
@@ -93,22 +94,6 @@ class Trainer:
             raise FileNotFoundError(f"Config file not found: {config_path}")
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in config file: {e}")
-
-    def _setup_logging(self, debug: bool) -> logging.Logger:
-        """Configure logging for the trainer.
-
-        :return: Configured logger
-        :rtype: logging.Logger
-        """
-        logger = logging.getLogger("trainer")
-        logger.setLevel(logging.DEBUG if debug else logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
 
     def _get_model_family_settings(self) -> dict[str, Any]:
         """Get model-specific settings based on the model family.
@@ -158,7 +143,7 @@ class Trainer:
         :return: Tuple of (model, tokenizer)
         :rtype: tuple
         """
-        self.logger.info(f"Loading model: {self.config['model_name']}")
+        self.log.info(f"Loading model: {self.config['model_name']}")
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=self.config["model_name"],
             max_seq_length=self.config["max_seq_length"],
@@ -190,7 +175,7 @@ class Trainer:
         :return: Training statistics
         :rtype: Dict[str, Any]
         """
-        self.logger.info("Starting training process")
+        self.log.info("Starting training process")
         model, tokenizer = self._load_model_and_tokenizer()
         dataset = self._transform_dataset(None)
 
@@ -213,7 +198,7 @@ class Trainer:
         )
         train_dataset = train_test_split["train"]
         eval_dataset = train_test_split["test"]
-        self.logger.info(
+        self.log.info(
             f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}"
         )
         output_dir = self.config.get(
@@ -261,10 +246,10 @@ class Trainer:
         #     instruction_part=model_settings["instruction_part"],
         #     response_part=model_settings["response_part"],
         # )
-        self.logger.info("Starting training")
+        self.log.info("Starting training")
         training_stats = trainer.train()
-        self.logger.info("Training completed")
-        self.logger.debug(f"Training stats: {training_stats}")
+        self.log.info("Training completed")
+        self.log.debug(f"Training stats: {training_stats}")
         return training_stats
 
 
@@ -301,7 +286,6 @@ def main() -> int:
     except Exception as e:
         print(f"Error: {e}")
         import traceback
-
         traceback.print_exc()
         return 1
 
