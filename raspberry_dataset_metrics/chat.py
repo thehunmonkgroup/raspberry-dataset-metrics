@@ -5,11 +5,9 @@ Loads configuration from YAML files and abstracts model-specific logic.
 """
 
 import argparse
-import logging
 import re
 from re import Pattern
 import sys
-import yaml
 from pathlib import Path
 from typing import Any
 from collections.abc import Iterator
@@ -26,16 +24,15 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import clear
 
-from unsloth import FastLanguageModel
-from unsloth.chat_templates import get_chat_template
 from peft.peft_model import PeftModel
+from unsloth import FastLanguageModel
 
 import torch
 from transformers import TextStreamer
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
-from .logger import Logger
+from raspberry_dataset_metrics.base_model import BaseModelHandler
 
 
 class ChatCommandCompleter(Completer):
@@ -200,7 +197,7 @@ class RichTextStreamer(TextStreamer):
                 self.buffer = ""
 
 
-class Chat:
+class Chat(BaseModelHandler):
     """Main class for interacting with fine-tuned language models using configuration from YAML files."""
 
     def __init__(
@@ -215,15 +212,10 @@ class Chat:
         :param debug: Enable debug logging
         :type debug: bool
         """
-        self.config_path: Path = config_path
+        super().__init__(config_path, debug)
         self.checkpoint: str | None = checkpoint
-        self.config: dict[str, Any] = self._load_config(self.config_path)
-        self.log: logging.Logger = Logger(self.__class__.__name__, debug=debug)
-        self.log.info(f"Initializing chat with configuration: {self.config_path}")
         if self.checkpoint:
             self.log.info(f"Using checkpoint: {self.checkpoint}")
-        self.log.debug(f"Configuration: {self.config}")
-        self.model_settings: dict[str, Any] = self._get_model_family_settings()
         self.messages: list[dict[str, str]] = []
         self.response_extraction_pattern: Pattern[str] = re.compile(
             self.model_settings["response_extraction_pattern"], re.DOTALL
@@ -242,57 +234,11 @@ class Chat:
         self.console: Console = Console(theme=custom_theme)
         self.command_completer: ChatCommandCompleter = ChatCommandCompleter()
 
-    def _load_config(self, config_path: Path) -> dict[str, Any]:
-        """Load and merge configuration from YAML with defaults.
-
-        :param config_path: Path to the YAML configuration file
-        :type config_path: Path
-        :return: Merged configuration dictionary
-        :rtype: Dict[str, Any]
-        :raises FileNotFoundError: If the config file doesn't exist
-        :raises yaml.YAMLError: If the YAML file is invalid
-        """
-        try:
-            with open(config_path, "r") as file:
-                config = yaml.safe_load(file)
-            merged_config = {
-                "model_name": "",
-                "model_family": "",
-                "max_seq_length": constants.MAX_SEQ_LENGTH,
-                "dtype": constants.DTYPE,
-                "load_in_4bit": constants.LOAD_IN_4BIT,
-                "system_message": constants.SYSTEM_MESSAGE,
-                "temperature": constants.TEMPERATURE,
-                "min_p": constants.MIN_P,
-                "max_new_tokens": constants.MAX_NEW_TOKENS,
-            }
-            merged_config.update(config)
-            return merged_config
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Config file not found: {config_path}")
-        except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in config file: {e}")
-
-    def _get_model_family_settings(self) -> dict[str, Any]:
-        """Get model-specific settings based on the model family.
-
-        :return: Dictionary of model-specific settings
-        :rtype: dict[str, Any]
-        :raises ValueError: If model family is not supported
-        """
-        model_family = self.config.get("model_family")
-        if not model_family or model_family not in constants.MODEL_FAMILIES:
-            raise ValueError(
-                "Unsupported or unspecified model family. Please specify 'model_family' in config."
-            )
-        settings = constants.MODEL_FAMILIES[model_family].copy()
-        return settings
-
     def init_messages(self) -> list[dict[str, str]]:
         """Initialize conversation with system message.
 
         :return: List of message dictionaries
-        :rtype: List[Dict[str, str]]
+        :rtype: list[dict[str, str]]
         """
         system_message = self.config.get("system_message", constants.SYSTEM_MESSAGE)
         messages = []
@@ -306,17 +252,8 @@ class Chat:
         :return: Tuple of (model, tokenizer)
         :rtype: tuple[Any, Any]
         """
-        self.log.info(f"Loading model: {self.config['model_name']}")
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=self.config["model_name"],
-            max_seq_length=self.config["max_seq_length"],
-            dtype=self.config["dtype"],
-            load_in_4bit=self.config["load_in_4bit"],
-        )
-        tokenizer = get_chat_template(
-            tokenizer,
-            chat_template=self.model_settings["chat_template"],
-        )
+        model, tokenizer = self.load_model_and_tokenizer()
+
         if self.checkpoint:
             output_dir = self.config.get(
                 "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"

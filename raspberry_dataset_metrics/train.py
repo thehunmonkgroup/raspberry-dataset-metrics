@@ -5,8 +5,6 @@ Loads configuration from YAML files and abstracts model-specific logic.
 """
 
 import argparse
-import logging
-import yaml
 import pprint
 from pathlib import Path
 import sys
@@ -14,7 +12,6 @@ from typing import Any
 
 from unsloth import FastLanguageModel, is_bfloat16_supported
 from unsloth.chat_templates import (
-    get_chat_template,
     standardize_sharegpt,
     # train_on_responses_only,
 )
@@ -23,12 +20,11 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 # from transformers import TrainingArguments, DataCollatorForSeq2Seq
 
-from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics import util
-from .logger import Logger
+from raspberry_dataset_metrics.base_model import BaseModelHandler
 
 
-class Trainer:
+class Trainer(BaseModelHandler):
     """Main class for fine-tuning language models using configuration from YAML files."""
 
     def __init__(
@@ -40,74 +36,12 @@ class Trainer:
         :type config_path: Path
         :param dataset_file: Path to the dataset file
         :type dataset_file: Path
+        :param debug: Enable debug logging
+        :type debug: bool
         """
-        self.config_path: Path = config_path
+        super().__init__(config_path, debug)
         self.dataset_file: Path = dataset_file
-        self.config: dict[str, Any] = self._load_config(self.config_path)
-        self.log: logging.Logger = Logger(self.__class__.__name__, debug=debug)
-        self.log.info(
-            f"Initializing trainer with configuration: {self.config_path}, dataset: {self.dataset_file}"
-        )
-        self.log.debug(f"Configuration: {self.config}")
-
-    def _load_config(self, config_path: Path) -> dict[str, Any]:
-        """Load and merge configuration from YAML with defaults.
-
-        :param config_path: Path to the YAML configuration file
-        :type config_path: Path
-        :return: Merged configuration dictionary
-        :rtype: Dict[str, Any]
-        :raises FileNotFoundError: If the config file doesn't exist
-        :raises yaml.YAMLError: If the YAML file is invalid
-        """
-        try:
-            with open(config_path, "r") as file:
-                config = yaml.safe_load(file)
-            merged_config = {
-                "max_seq_length": constants.MAX_SEQ_LENGTH,
-                "dtype": constants.DTYPE,
-                "load_in_4bit": constants.LOAD_IN_4BIT,
-                "lora_rank": constants.LORA_RANK,
-                "lora_alpha": constants.LORA_ALPHA,
-                "lora_dropout": constants.LORA_DROPOUT,
-                "target_modules": constants.TARGET_MODULES,
-                "random_seed": constants.RANDOM_SEED,
-                "use_rslora": constants.USE_RSLORA,
-                "per_device_train_batch_size": constants.PER_DEVICE_TRAIN_BATCH_SIZE,
-                "gradient_accumulation_steps": constants.GRADIENT_ACCUMULATION_STEPS,
-                "warmup_steps": constants.WARMUP_STEPS,
-                "num_train_epochs": constants.NUM_TRAIN_EPOCHS,
-                "learning_rate": constants.LEARNING_RATE,
-                "weight_decay": constants.WEIGHT_DECAY,
-                "logging_steps": constants.LOGGING_STEPS,
-                "dataset_num_proc": constants.DATASET_NUM_PROC,
-                "scheduler_type": constants.SCHEDULER_TYPE,
-                "test_size": constants.TRAIN_TEST_SPLIT_SIZE,
-                "system_message": constants.SYSTEM_MESSAGE,
-                "format_with_eos_token": constants.FORMAT_WITH_EOS_TOKEN,
-            }
-            merged_config.update(config)
-            if type(merged_config["learning_rate"]) is str:
-                merged_config["learning_rate"] = float(merged_config["learning_rate"])
-            return merged_config
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Config file not found: {config_path}")
-        except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in config file: {e}")
-
-    def _get_model_family_settings(self) -> dict[str, Any]:
-        """Get model-specific settings based on the model family.
-
-        :return: Dictionary of model-specific settings
-        :rtype: Dict[str, Any]
-        :raises ValueError: If model family is not supported
-        """
-        model_family = self.config.get("model_family")
-        if not model_family or model_family not in constants.MODEL_FAMILIES:
-            raise ValueError(
-                "Unsupported or unspecified model family. Please specify 'model_family' in config."
-            )
-        return constants.MODEL_FAMILIES[model_family]
+        self.log.info(f"Initializing trainer with dataset: {self.dataset_file}")
 
     def _transform_dataset(self, dataset: Any) -> Any:
         """Transform dataset into conversation format.
@@ -143,13 +77,7 @@ class Trainer:
         :return: Tuple of (model, tokenizer)
         :rtype: tuple
         """
-        self.log.info(f"Loading model: {self.config['model_name']}")
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=self.config["model_name"],
-            max_seq_length=self.config["max_seq_length"],
-            dtype=self.config["dtype"],
-            load_in_4bit=self.config["load_in_4bit"],
-        )
+        model, tokenizer = self.load_model_and_tokenizer()
         model = FastLanguageModel.get_peft_model(
             model,
             r=self.config["lora_rank"],
@@ -162,18 +90,13 @@ class Trainer:
             use_rslora=self.config["use_rslora"],
             loftq_config=None,
         )
-        model_settings = self._get_model_family_settings()
-        tokenizer = get_chat_template(
-            tokenizer,
-            chat_template=model_settings["chat_template"],
-        )
         return model, tokenizer
 
     def train(self) -> dict[str, Any]:
         """Train the model using the loaded configuration.
 
         :return: Training statistics
-        :rtype: Dict[str, Any]
+        :rtype: dict[str, Any]
         """
         self.log.info("Starting training process")
         model, tokenizer = self._load_model_and_tokenizer()
