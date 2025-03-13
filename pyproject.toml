@@ -18,9 +18,9 @@ classifiers = [
 ]
 dependencies = [
     "unsloth @ git+https://github.com/unslothai/unsloth.git@fe04c01",
+    "transformers @ git+https://github.com/huggingface/transformers.git@69bc848",
     "datasets>=2.14.0",
     "trl>=0.7.7",
-    "transformers>=4.35.0",
     "pyyaml>=6.0",
     "torch>=2.0.0",
     "accelerate>=0.25.0",
