@@ -10,8 +10,8 @@ DTYPE = None  # Auto-detect (Float16 for T4/V100, BFloat16 for Ampere+)
 LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
 
 # Training hyperparameters
-LORA_RANK = 64
-LORA_ALPHA = 64
+LORA_RANK = 128
+LORA_ALPHA = 128
 LORA_DROPOUT = 0
 TARGET_MODULES = [
     "q_proj",
@@ -30,7 +30,7 @@ PER_DEVICE_TRAIN_BATCH_SIZE = 2
 GRADIENT_ACCUMULATION_STEPS = 4
 WARMUP_STEPS = 10
 NUM_TRAIN_EPOCHS = 3
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 2e-4
 WEIGHT_DECAY = 0.01
 LOGGING_STEPS = 1
 DATASET_NUM_PROC = 2
