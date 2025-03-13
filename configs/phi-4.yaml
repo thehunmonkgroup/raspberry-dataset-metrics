@@ -1,6 +1,2 @@
 model_name: "unsloth/phi-4-unsloth-bnb-4bit"
 model_family: "phi-4"
-
-# Optional overrides
-warmup_steps: 5
-scheduler_type: "linear"

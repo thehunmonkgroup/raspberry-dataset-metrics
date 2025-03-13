@@ -5,13 +5,13 @@ These can be overridden by values in config files.
 """
 
 # Model parameters
-MAX_SEQ_LENGTH = 32768  # Context window size
+MAX_SEQ_LENGTH = 16384  # Context window size
 DTYPE = None  # Auto-detect (Float16 for T4/V100, BFloat16 for Ampere+)
 LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
 
 # Training hyperparameters
-LORA_RANK = 16
-LORA_ALPHA = 16
+LORA_RANK = 64
+LORA_ALPHA = 64
 LORA_DROPOUT = 0
 TARGET_MODULES = [
     "q_proj",
@@ -28,13 +28,13 @@ USE_RSLORA = False
 # Training arguments
 PER_DEVICE_TRAIN_BATCH_SIZE = 2
 GRADIENT_ACCUMULATION_STEPS = 4
-WARMUP_STEPS = 100
+WARMUP_STEPS = 10
 NUM_TRAIN_EPOCHS = 3
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 0.01
 LOGGING_STEPS = 1
 DATASET_NUM_PROC = 2
-SCHEDULER_TYPE = "cosine"
+SCHEDULER_TYPE = "linear"
 TRAIN_TEST_SPLIT_SIZE = 0.1
 FORMAT_WITH_EOS_TOKEN = False
 
