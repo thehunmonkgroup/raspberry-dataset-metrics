@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "unsloth>=0.6.0",
+    "unsloth @ git+https://github.com/unslothai/unsloth.git@fe04c01",
     "datasets>=2.14.0",
     "trl>=0.7.7",
     "transformers>=4.35.0",
