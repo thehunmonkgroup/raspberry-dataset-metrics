@@ -1,0 +1,3 @@
+
+model_name: "unsloth/gemma-3-4b-pt-bnb-4bit"
+model_family: "gemma-3"
