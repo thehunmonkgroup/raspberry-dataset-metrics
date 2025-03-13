@@ -500,18 +500,15 @@ class Chat(BaseModelHandler):
                 # Create streamer that will handle assistant's response
                 text_streamer = RichTextStreamer(
                     tokenizer,
-                    eos_token=self.model_settings["eos_token"],
+                    eos_token=tokenizer.eos_token,
                     console=self.console
-                )
-                eos_token_id = tokenizer.convert_tokens_to_ids(
-                    self.model_settings["eos_token"]
                 )
                 _ = model.generate(
                     input_ids=inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
                     streamer=text_streamer,
                     max_new_tokens=self.config["max_new_tokens"],
-                    eos_token_id=eos_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
                     use_cache=True,
                     temperature=self.config["temperature"],
                     min_p=self.config["min_p"],
