@@ -96,4 +96,11 @@ MODEL_FAMILIES = {
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
         "eos_token": "<|im_end|>",
     },
+    "gemma-3": {
+        "chat_template": "gemma-3",
+        "instruction_part": "<start_of_turn>user\n",
+        "response_part": "<start_of_turn>model\n",
+        "response_extraction_pattern": r".*<start_of_turn>model\n([\s\S]*?)$",
+        "eos_token": "",
+    },
 }
