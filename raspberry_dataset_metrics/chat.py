@@ -24,8 +24,8 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import clear
 
-from peft.peft_model import PeftModel
 from unsloth import FastLanguageModel
+from peft.peft_model import PeftModel
 
 import torch
 from transformers import TextStreamer
