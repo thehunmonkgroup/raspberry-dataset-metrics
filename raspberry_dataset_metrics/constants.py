@@ -90,7 +90,7 @@ MODEL_FAMILIES = {
         "chat_template": "qwen-2.5",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
-        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
+        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|endoftext\|>$",
     },
     "gemma-3": {
         "chat_template": "gemma-3",
