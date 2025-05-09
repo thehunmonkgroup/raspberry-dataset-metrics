@@ -7,9 +7,9 @@ import logging
 import yaml
 from pathlib import Path
 from typing import Any
+import torch
 
-from unsloth import FastLanguageModel
-from unsloth.chat_templates import get_chat_template
+from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig)
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics.logger import Logger
@@ -67,23 +67,52 @@ class BaseModelHandler:
             )
         return constants.MODEL_FAMILIES[model_family].copy()
 
-    def load_model_and_tokenizer(self) -> tuple[Any, Any]:
+    def has_existing_peft_config(self, model: Any) -> bool:
+        has_peft_config = hasattr(model, "peft_config")
+        if has_peft_config:
+            self.log.warning(f"Model already has default PEFT configuration: {model.peft_config}")
+        return has_peft_config
+
+    def is_model_loaded_in_4bit(self, model: Any) -> bool:
+        if model.is_loaded_in_4bit:
+            self.log.info("Model is loaded in 4-bit mode.")
+        return model.is_loaded_in_4bit
+
+    def load_model_and_tokenizer(self, pad_token: str = "<pad>") -> tuple[Any, Any]:
         """Load model and tokenizer with appropriate configuration.
 
         :return: Tuple of (model, tokenizer)
         :rtype: tuple[Any, Any]
         """
         self.log.info(f"Loading model: {self.config['model_name']}")
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=self.config["model_name"],
-            max_seq_length=self.config["max_seq_length"],
-            dtype=self.config["dtype"],
-            load_in_4bit=self.config["load_in_4bit"],
+        bnb_4bit_compute_dtype = getattr(torch, self.config["bnb_4bit_compute_dtype"])
+        bnb_setup = BitsAndBytesConfig(load_in_4bit = self.config['load_in_4bit'],
+                                    bnb_4bit_quant_type = self.config['bnb_4bit_quant_type'],
+                                    bnb_4bit_use_double_quant = self.config['bnb_4bit_use_double_quant'],
+                                    bnb_4bit_compute_dtype = bnb_4bit_compute_dtype)
+        model = AutoModelForCausalLM.from_pretrained(
+            self.config["model_name"],
+            quantization_config = bnb_setup,
+            device_map = self.config["device_map"],
         )
-
-        tokenizer = get_chat_template(
-            tokenizer,
-            chat_template=self.model_settings["chat_template"],
+        self.has_existing_peft_config(model)
+        self.is_model_loaded_in_4bit(model)
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.config["model_name"],
+            use_fast=True,
+            trust_remote_code = True,
         )
-
+        if tokenizer.pad_token is None:
+            tokenizer.add_special_tokens({"pad_token": pad_token})
+            pad_id = tokenizer.pad_token_id
+            model.resize_token_embeddings(len(tokenizer))
+            model.config.pad_token_id = pad_id
         return model, tokenizer
+
+    def generate_prompt(self, tokenizer: Any, chat: list[dict[str, str]], add_generation_prompt: bool = True) -> str:
+        prompt = tokenizer.apply_chat_template(
+            chat,
+            tokenize=False,
+            add_generation_prompt=add_generation_prompt,  # <|start_header_id|>assistant … tag
+        )
+        return prompt

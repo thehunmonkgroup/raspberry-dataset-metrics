@@ -24,7 +24,6 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import clear
 
-from unsloth import FastLanguageModel
 from peft.peft_model import PeftModel
 
 import torch
@@ -101,7 +100,7 @@ class RichTextStreamer(TextStreamer):
         self.in_reasoning_tag: bool = False
         self.in_output_tag: bool = False
 
-    def put(self, value: Any) -> None:  # pyright: ignore[reportImplicitOverride]
+    def put(self, value: Any) -> None:
         """Process, format, and display a token with Rich styling.
 
         :param value: Token or tensor to process
@@ -111,7 +110,7 @@ class RichTextStreamer(TextStreamer):
             return super().put(value)
 
         value = value.cpu()
-        text = self.tokenizer.decode(  # pyright: ignore[reportAttributeAccessIssue]
+        text = self.tokenizer.decode(
             value[0] if value.dim() > 1 else value
         )
 
@@ -123,7 +122,7 @@ class RichTextStreamer(TextStreamer):
         # This is the key change - delegate to parent for display decisions
         super().put(value)
 
-    def on_finalized_text(self, text: str, stream_end: bool = False) -> None:  # pyright: ignore[reportImplicitOverride]
+    def on_finalized_text(self, text: str, stream_end: bool = False) -> None:
         """Process finalized text chunks after prompt skipping.
 
         :param text: Text chunk to process and display
@@ -271,10 +270,13 @@ class Chat(BaseModelHandler):
                 f"Loading adapter weights from checkpoint {checkpoint_path}"
             )
             model = PeftModel.from_pretrained(model, checkpoint_path)
-        model = FastLanguageModel.for_inference(model)
-        if self.checkpoint:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            model = model.to(device)
+        model.eval()
+        torch.set_grad_enabled(False)
+        try:
+            model = torch.compile(model)          # PyTorch ≥ 2.1
+        except Exception:
+            self.log.warning("Unable to compile model with torch.compile().")
+            pass
         return model, tokenizer
 
     def process_response(self, response: str) -> str | None:

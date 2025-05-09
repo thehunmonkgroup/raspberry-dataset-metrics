@@ -4,21 +4,17 @@ Universal training script for fine-tuning language models using Unsloth.
 Loads configuration from YAML files and abstracts model-specific logic.
 """
 
+import re
 import argparse
 import pprint
 from pathlib import Path
 import sys
 from typing import Any
 
-from unsloth import FastLanguageModel, is_bfloat16_supported
-from unsloth.chat_templates import (
-    standardize_sharegpt,
-    # train_on_responses_only,
-)
+import torch
 from datasets import load_dataset
-from trl import SFTTrainer
-from transformers import TrainingArguments
-# from transformers import TrainingArguments, DataCollatorForSeq2Seq
+from trl import SFTTrainer, SFTConfig
+from peft import LoraConfig, get_peft_model
 
 from raspberry_dataset_metrics import util
 from raspberry_dataset_metrics.base_model import BaseModelHandler
@@ -51,46 +47,70 @@ class Trainer(BaseModelHandler):
         :return: Transformed dataset
         :rtype: Any
         """
-        system_message = self.config.get("system_message", False)
 
         def transform_format(
             example: dict[str, str],
-        ) -> dict[str, list[dict[str, str]]]:
-            elements = []
-            if system_message:
-                elements.append({"from": "system", "value": system_message})
-            elements.append({"from": "human", "value": example["user"]})
-            elements.append({"from": "gpt", "value": example["assistant"]})
-            return {"conversations": elements}
+        ) -> dict[str, str]:
+            chat = [
+                {"role": "user",   "content": example["user"]},
+                {"role": "assistant", "content": example["assistant"]}
+            ]
+            example["text"] = self.tokenizer.apply_chat_template(
+                chat,
+                tokenize=False,
+                add_generation_prompt=False,
+            )
+            return {
+                "text": example["text"],
+            }
 
         dataset = load_dataset(
-            "json", data_files=str(self.dataset_file), trust_remote_code=False
+            "json",
+            data_files=str(self.dataset_file),
+            trust_remote_code=False,
+            split = "train",
         )
-        dataset = dataset["train"]
-        transformed_dataset = dataset.map(transform_format)
-        transformed_dataset = standardize_sharegpt(transformed_dataset)
-        return transformed_dataset
+        training_data = dataset.map(transform_format, remove_columns=dataset.column_names)
+        return training_data
 
-    def _load_model_and_tokenizer(self) -> tuple[Any, Any]:
+    def _load_model_and_tokenizer(self) -> tuple[Any, Any, Any]:
         """Load model and tokenizer with appropriate configuration.
 
         :return: Tuple of (model, tokenizer)
         :rtype: tuple
         """
+        self.log.debug("Loading model and tokenizer")
         model, tokenizer = self.load_model_and_tokenizer()
-        model = FastLanguageModel.get_peft_model(
-            model,
+        peft_setup = LoraConfig(
             r=self.config["lora_rank"],
             target_modules=self.config["target_modules"],
             lora_alpha=self.config["lora_alpha"],
             lora_dropout=self.config["lora_dropout"],
-            bias="none",
-            use_gradient_checkpointing="unsloth",  # pyright: ignore[reportArgumentType]
-            random_state=self.config["random_seed"],
-            use_rslora=self.config["use_rslora"],
-            loftq_config=None,
+            bias = "none",
+            task_type = "CAUSAL_LM",
+            inference_mode=False,
         )
-        return model, tokenizer
+        model_family_stub = re.sub(r'\W+', '_', self.config['model_family'])
+        model_adjustments = getattr(self, f"adjust_model_{model_family_stub}", None)
+        if model_adjustments:
+            self.log.debug(f"Applying model adjustments for family {self.config['model_family']}")
+            model = model_adjustments(model)
+        tokenizer_adjustments = getattr(self, f"adjust_tokenizer_{model_family_stub}", None)
+        if tokenizer_adjustments:
+            self.log.debug(f"Applying tokenizer adjustments for family {self.config['model_family']}")
+            tokenizer = tokenizer_adjustments(tokenizer)
+        return model, tokenizer, peft_setup
+
+    def get_gpu_capabilities(self) -> tuple[bool, bool]:
+        fp16_supported = torch.cuda.get_device_capability()[0] >= 5 and torch.cuda.is_available()
+        bf16_supported = torch.cuda.is_bf16_supported() if torch.cuda.is_available() else False
+        use_fp16 = False
+        use_bf16 = False
+        if bf16_supported:
+            use_bf16 = True
+        elif fp16_supported:
+            use_fp16 = True
+        return use_fp16, use_bf16
 
     def train(self) -> dict[str, Any]:
         """Train the model using the loaded configuration.
@@ -99,82 +119,68 @@ class Trainer(BaseModelHandler):
         :rtype: dict[str, Any]
         """
         self.log.info("Starting training process")
-        model, tokenizer = self._load_model_and_tokenizer()
-        dataset = self._transform_dataset(None)
-
-        def formatting_prompts_func(examples: dict[str, Any]) -> dict[str, Any]:
-            convos = examples["conversations"]
-            texts = []
-            for convo in convos:
-                text = tokenizer.apply_chat_template(
-                    convo, tokenize=False, add_generation_prompt=False
-                )
-                if self.config["format_with_eos_token"]:
-                    text += tokenizer.eos_token
-                texts.append(text)
-            return {"text": texts}
-
-        formatted_dataset = dataset.map(formatting_prompts_func, batched=True)
-        train_test_split = formatted_dataset.train_test_split(
-            test_size=self.config["test_size"],
-            seed=self.config["random_seed"],
-        )
-        train_dataset = train_test_split["train"]
-        eval_dataset = train_test_split["test"]
+        model, tokenizer, peft_setup = self._load_model_and_tokenizer()
+        train_dataset = self._transform_dataset(None)
         self.log.info(
-            f"Dataset prepared. Training samples: {len(train_dataset)}, Evaluation samples: {len(eval_dataset)}"
+            f"Dataset prepared. Training samples: {len(train_dataset)}"
         )
         output_dir = self.config.get(
             "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
         )
         Path(output_dir).mkdir(exist_ok=True, parents=True)
-        training_args = TrainingArguments(
+
+
+        model.enable_input_require_grads() # A quirk of LoRA + gradient checkpointing
+        model = get_peft_model(model, peft_setup)
+
+        use_fp16, use_bf16 = self.get_gpu_capabilities()
+        train_args = SFTConfig(
+            output_dir = output_dir,
+            num_train_epochs=self.config["num_train_epochs"],
             per_device_train_batch_size=self.config["per_device_train_batch_size"],
             gradient_accumulation_steps=self.config["gradient_accumulation_steps"],
-            warmup_steps=self.config["warmup_steps"],
-            num_train_epochs=self.config["num_train_epochs"],
             learning_rate=self.config["learning_rate"],
-            fp16=not is_bfloat16_supported(),
-            bf16=is_bfloat16_supported(),
-            logging_steps=self.config["logging_steps"],
-            optim="adamw_8bit",
             weight_decay=self.config["weight_decay"],
+            optim=self.config["optimizer_type"],
+            save_steps=self.config["save_steps"],
+            logging_steps=self.config["logging_steps"],
+            fp16 = use_fp16,
+            bf16 = use_bf16,
+            max_grad_norm=self.config["max_grad_norm"],
+            warmup_ratio=self.config["warmup_ratio"],
+            group_by_length=self.config["group_by_length"],
             lr_scheduler_type=self.config["scheduler_type"],
-            seed=self.config["random_seed"],
-            output_dir=output_dir,
-            evaluation_strategy="epoch",
-            save_strategy="epoch",
+            gradient_checkpointing=self.config["gradient_checkpointing"],
+            dataset_text_field = "text",
+            max_seq_length=self.config["max_seq_length"],
+            packing=self.config["enable_packing"],
             load_best_model_at_end=True,
             metric_for_best_model="loss",
+            evaluation_strategy="epoch",
+            save_strategy="epoch",
         )
         trainer = SFTTrainer(
-            model=model,
-            tokenizer=tokenizer,  # pyright: ignore[reportCallIssue]
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            dataset_text_field="text",  # pyright: ignore[reportCallIssue]
-            max_seq_length=self.config[  # pyright: ignore[reportCallIssue]
-                "max_seq_length"
-            ],
-            # data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
-            dataset_num_proc=self.config[  # pyright: ignore[reportCallIssue]
-                "dataset_num_proc"
-            ],
-            packing=False,  # pyright: ignore[reportCallIssue]
-            args=training_args,
+            model = model,
+            args = train_args,
+            train_dataset = train_dataset,
+            processing_class=tokenizer,
         )
-        # model_settings = self._get_model_family_settings()
-        # trainer = train_on_responses_only(
-        #     trainer,
-        #     instruction_part=model_settings["instruction_part"],
-        #     response_part=model_settings["response_part"],
-        # )
+        model.config.use_cache = False       # free key/value cache
+        model.gradient_checkpointing_enable()  # discard activations
         self.log.info("Starting training")
         training_stats = trainer.train()
         self.log.info("Training completed")
         self.log.debug(f"Training stats: {training_stats}")
         return training_stats
 
+    def adjust_model_llama_3_1(self, model: Any) -> Any:
+        model.config.use_case = False
+        model.config.pretraining_tp = 1
+        return model
+
+    def adjust_tokenizer_llama_3_1(self, tokenizer: Any) -> Any:
+        tokenizer.padding_side = "left"
+        return tokenizer
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments.

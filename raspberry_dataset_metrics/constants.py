@@ -6,13 +6,16 @@ These can be overridden by values in config files.
 
 # Model parameters
 MAX_SEQ_LENGTH = 16384  # Context window size
-DTYPE = None  # Auto-detect (Float16 for T4/V100, BFloat16 for Ampere+)
 LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
-
+BNB_4BIT_COMPUTE_DTYPE = "float16"
+BNB_4BIT_QUANT_TYPE = "nf4"
+BNB_4BIT_USE_DOUBLE_QUANT = True
+DEVICE_MAP = "auto"
+#
 # Training hyperparameters
-LORA_RANK = 128
-LORA_ALPHA = 128
-LORA_DROPOUT = 0
+LORA_RANK = 256
+LORA_ALPHA = 256
+LORA_DROPOUT = 0.1
 TARGET_MODULES = [
     "q_proj",
     "k_proj",
@@ -22,21 +25,28 @@ TARGET_MODULES = [
     "up_proj",
     "down_proj",
 ]
-RANDOM_SEED = 3407
-USE_RSLORA = False
-
-# Training arguments
-PER_DEVICE_TRAIN_BATCH_SIZE = 2
-GRADIENT_ACCUMULATION_STEPS = 4
-WARMUP_STEPS = 10
+# RANDOM_SEED = 3407
+# USE_RSLORA = False
+#
+# Training parameters
+PER_DEVICE_TRAIN_BATCH_SIZE = 4
+PER_DEVICE_EVAL_BATCH_SIZE = 4
+GRADIENT_ACCUMULATION_STEPS = 1
+WARMUP_RATIO = 0.03
 NUM_TRAIN_EPOCHS = 3
 LEARNING_RATE = 2e-4
-WEIGHT_DECAY = 0.01
+WEIGHT_DECAY = 0.001
 LOGGING_STEPS = 1
-DATASET_NUM_PROC = 2
-SCHEDULER_TYPE = "linear"
+# DATASET_NUM_PROC = 2
+OPTIMIZER_TYPE = "paged_adamw_32bit"
+SCHEDULER_TYPE = "cosine"
 TRAIN_TEST_SPLIT_SIZE = 0.1
 FORMAT_WITH_EOS_TOKEN = False
+ENABLE_PACKING = True
+MAX_GRAD_NORM = 0.3
+GROUP_BY_LENGTH = False
+GRADIENT_CHECKPOINTING = True
+SAVE_STEPS = 0
 
 # System message
 SYSTEM_MESSAGE = """
