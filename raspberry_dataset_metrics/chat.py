@@ -200,21 +200,21 @@ class Chat(BaseModelHandler):
     """Main class for interacting with fine-tuned language models using configuration from YAML files."""
 
     def __init__(
-        self, config_path: Path, checkpoint: str | None = None, debug: bool = False
+        self, config_path: Path, fine_tune: bool = False, debug: bool = False
     ) -> None:
         """Initialize chat interface with configuration from YAML.
 
         :param config_path: Path to the YAML configuration file
         :type config_path: Path
-        :param checkpoint: Checkpoint directory
-        :type checkpoint: str | None
+        :param fine_tune: Load fine-tuned model
+        :type fine_tune: bool
         :param debug: Enable debug logging
         :type debug: bool
         """
         super().__init__(config_path, debug)
-        self.checkpoint: str | None = checkpoint
-        if self.checkpoint:
-            self.log.info(f"Using checkpoint: {self.checkpoint}")
+        self.fine_tune: bool = fine_tune
+        if self.fine_tune:
+            self.log.info("Using fine-tuned model")
         self.messages: list[dict[str, str]] = []
         self.response_extraction_pattern: Pattern[str] = re.compile(
             self.model_settings["response_extraction_pattern"], re.DOTALL
@@ -253,11 +253,11 @@ class Chat(BaseModelHandler):
         """
         model, tokenizer = self.load_model_and_tokenizer()
 
-        if self.checkpoint:
+        if self.fine_tune:
             output_dir = self.config.get(
                 "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
             )
-            checkpoint_path = Path(output_dir) / self.checkpoint
+            checkpoint_path = Path(output_dir)
             if not checkpoint_path.exists():
                 raise FileNotFoundError(
                     f"Error: Checkpoint directory not found: {checkpoint_path}"
@@ -539,7 +539,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("config_file", help="Path to the YAML config file")
     parser.add_argument(
-        "--checkpoint", help="Checkpoint directory (e.g., 'checkpoint-60')"
+        "--fine-tune", action="store_true", help="Load fine-tuned model"
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     return parser.parse_args()
@@ -554,7 +554,7 @@ def main() -> int:
     try:
         args = parse_args()
         config_path = Path(args.config_file)
-        chat = Chat(config_path, args.checkpoint, args.debug)
+        chat = Chat(config_path, args.fine_tune, args.debug)
         chat.run()
         return 0
     except Exception as e:

@@ -8,7 +8,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=meta-llama/Llama-3.2-3B-Instruct,peft=$(pwd)/outputs/llama-3.2-3b/checkpoint-225,tokenizer=$(pwd)/outputs/llama-3.2-3b/checkpoint-225,dtype=bfloat16 \
+  --model_args pretrained=meta-llama/Llama-3.2-3B-Instruct,peft=$(pwd)/outputs/llama-3.2-3b,tokenizer=$(pwd)/outputs/llama-3.2-3b,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
@@ -25,7 +25,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,peft=$(pwd)/outputs/llama-3.1-8b/checkpoint-225,tokenizer=$(pwd)/outputs/llama-3.1-8b/checkpoint-225,dtype=bfloat16 \
+  --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,peft=$(pwd)/outputs/llama-3.1-8b,tokenizer=$(pwd)/outputs/llama-3.1-8b,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
@@ -42,7 +42,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=unsloth/Mistral-7B-Instruct-v0.3,peft=$(pwd)/outputs/mistral-7b/checkpoint-246,tokenizer=$(pwd)/outputs/mistral-7b/checkpoint-246,dtype=bfloat16 \
+  --model_args pretrained=unsloth/Mistral-7B-Instruct-v0.3,peft=$(pwd)/outputs/mistral-7b,tokenizer=$(pwd)/outputs/mistral-7b,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
@@ -59,7 +59,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=microsoft/phi-4,peft=$(pwd)/outputs/phi-4/checkpoint-213,tokenizer=$(pwd)/outputs/phi-4/checkpoint-213,dtype=bfloat16 \
+  --model_args pretrained=microsoft/phi-4,peft=$(pwd)/outputs/phi-4,tokenizer=$(pwd)/outputs/phi-4,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
@@ -76,7 +76,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=Qwen/Qwen2.5-7B-Instruct,peft=$(pwd)/outputs/qwen-2.5-7b/checkpoint-225,tokenizer=$(pwd)/outputs/qwen-2.5-7b/checkpoint-225,dtype=bfloat16 \
+  --model_args pretrained=Qwen/Qwen2.5-7B-Instruct,peft=$(pwd)/outputs/qwen-2.5-7b,tokenizer=$(pwd)/outputs/qwen-2.5-7b,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
@@ -93,7 +93,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=google/gemma-3-4b-it,peft=$(pwd)/outputs/gemma-3-4b-it/checkpoint-219,tokenizer=$(pwd)/outputs/gemma-3-4b-it/checkpoint-219,dtype=bfloat16 \
+  --model_args pretrained=google/gemma-3-4b-it,peft=$(pwd)/outputs/gemma-3-4b-it,tokenizer=$(pwd)/outputs/gemma-3-4b-it,dtype=bfloat16 \
   --tasks hellaswag \
   --device cuda:0 \
   --batch_size 8 \
