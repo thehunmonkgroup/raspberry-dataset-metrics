@@ -73,7 +73,7 @@ class Trainer(BaseModelHandler):
         training_data = dataset.map(transform_format, remove_columns=dataset.column_names)
         return training_data
 
-    def _load_model_and_tokenizer(self) -> tuple[Any, Any, Any]:
+    def _load_model_and_tokenizer(self) -> None:
         """Load model and tokenizer with appropriate configuration.
 
         :return: Tuple of (model, tokenizer)
@@ -99,7 +99,9 @@ class Trainer(BaseModelHandler):
         if tokenizer_adjustments:
             self.log.debug(f"Applying tokenizer adjustments for family {self.config['model_family']}")
             tokenizer = tokenizer_adjustments(tokenizer)
-        return model, tokenizer, peft_setup
+        self.model = model
+        self.tokenizer = tokenizer
+        self.peft_setup = peft_setup
 
     def get_gpu_capabilities(self) -> tuple[bool, bool]:
         fp16_supported = torch.cuda.get_device_capability()[0] >= 5 and torch.cuda.is_available()
@@ -119,7 +121,7 @@ class Trainer(BaseModelHandler):
         :rtype: dict[str, Any]
         """
         self.log.info("Starting training process")
-        model, tokenizer, peft_setup = self._load_model_and_tokenizer()
+        self._load_model_and_tokenizer()
         train_dataset = self._transform_dataset(None)
         self.log.info(
             f"Dataset prepared. Training samples: {len(train_dataset)}"
@@ -130,8 +132,8 @@ class Trainer(BaseModelHandler):
         Path(output_dir).mkdir(exist_ok=True, parents=True)
 
 
-        model.enable_input_require_grads() # A quirk of LoRA + gradient checkpointing
-        model = get_peft_model(model, peft_setup)
+        self.model.enable_input_require_grads() # A quirk of LoRA + gradient checkpointing
+        self.model = get_peft_model(self.model, self.peft_setup)
 
         use_fp16, use_bf16 = self.get_gpu_capabilities()
         train_args = SFTConfig(
@@ -160,13 +162,13 @@ class Trainer(BaseModelHandler):
             save_strategy="epoch",
         )
         trainer = SFTTrainer(
-            model = model,
+            model = self.model,
             args = train_args,
             train_dataset = train_dataset,
-            processing_class=tokenizer,
+            processing_class=self.tokenizer,
         )
-        model.config.use_cache = False       # free key/value cache
-        model.gradient_checkpointing_enable()  # discard activations
+        self.model.config.use_cache = False       # free key/value cache
+        self.model.gradient_checkpointing_enable()  # discard activations
         self.log.info("Starting training")
         training_stats = trainer.train()
         self.log.info("Training completed")
