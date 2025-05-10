@@ -1,2 +1,2 @@
-model_name: "unsloth/phi-4-unsloth-bnb-4bit"
+model_name: "microsoft/phi-4"
 model_family: "phi-4"

@@ -1,5 +1,5 @@
-model_name: "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
+model_name: "mistralai/Mistral-7B-Instruct-v0.3"
 model_family: "mistral"
 
 # Optional overrides
-learning_rate: 5e-5
+# learning_rate: 5e-5
