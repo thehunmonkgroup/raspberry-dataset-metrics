@@ -156,9 +156,9 @@ class Trainer(BaseModelHandler):
             dataset_text_field = "text",
             max_seq_length=self.config["max_seq_length"],
             packing=self.config["enable_packing"],
-            load_best_model_at_end=True,
-            metric_for_best_model="loss",
-            evaluation_strategy="epoch",
+            # load_best_model_at_end=True,
+            # eval_strategy="no",
+            # metric_for_best_model="loss",
             save_strategy="epoch",
         )
         trainer = SFTTrainer(
