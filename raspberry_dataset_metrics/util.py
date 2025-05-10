@@ -1,6 +1,14 @@
+import os
 from pathlib import Path
 import yaml
 from typing import Any
+
+from huggingface_hub import login
+
+
+def login_to_huggingface_hub():
+    token = os.environ.get("HUGGINGFACEHUB_API_TOKEN", None)
+    login(token)
 
 
 def get_config_base_name(config_path: Path | str) -> str:
