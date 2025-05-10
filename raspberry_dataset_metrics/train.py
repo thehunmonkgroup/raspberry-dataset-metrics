@@ -4,6 +4,7 @@ Universal training script for fine-tuning language models using Unsloth.
 Loads configuration from YAML files and abstracts model-specific logic.
 """
 
+import os
 import re
 import argparse
 import pprint
@@ -15,9 +16,25 @@ import torch
 from datasets import load_dataset
 from trl import SFTTrainer, SFTConfig
 from peft import LoraConfig, get_peft_model
+from transformers import TrainerCallback
 
 from raspberry_dataset_metrics import util
 from raspberry_dataset_metrics.base_model import BaseModelHandler
+
+
+
+
+
+class SaveTokenizerCallback(TrainerCallback):
+
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+
+    def on_save(self, args, state, control, **kwargs):
+        # same folder Trainer just saved the model into
+        ckpt_dir = os.path.join(args.output_dir, f"{state.best_model_checkpoint or f'checkpoint-{state.global_step}'}")
+        self.tokenizer.save_pretrained(ckpt_dir)
+        return control
 
 
 class Trainer(BaseModelHandler):
@@ -174,6 +191,7 @@ class Trainer(BaseModelHandler):
             args = train_args,
             train_dataset = train_dataset,
             processing_class=self.tokenizer,
+            callbacks=[SaveTokenizerCallback(self.tokenizer)],
         )
         self.model.config.use_cache = False       # free key/value cache
         self.model.gradient_checkpointing_enable()  # discard activations
