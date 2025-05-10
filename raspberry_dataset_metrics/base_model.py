@@ -35,6 +35,8 @@ class BaseModelHandler:
         self.log.info(f"Initializing with configuration: {self.config_path}")
         self.log.debug(f"Configuration: {self.config}")
         self.model_settings: dict[str, Any] = self._get_model_family_settings()
+        self.log.debug(f"Loaded model faily settings: {self.model_settings}")
+        self._login_to_huggingface_hub()
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
         """Load and merge configuration from YAML with defaults.
@@ -67,15 +69,23 @@ class BaseModelHandler:
             )
         return constants.MODEL_FAMILIES[model_family].copy()
 
+    def _login_to_huggingface_hub(self):
+        self.log.debug("Logging in to Hugging Face Hub")
+        util.login_to_huggingface_hub()
+
     def has_existing_peft_config(self, model: Any) -> bool:
         has_peft_config = hasattr(model, "peft_config")
         if has_peft_config:
             self.log.warning(f"Model already has default PEFT configuration: {model.peft_config}")
+        else:
+            self.log.debug("Model has no existing PEFT configuration.")
         return has_peft_config
 
     def is_model_loaded_in_4bit(self, model: Any) -> bool:
         if model.is_loaded_in_4bit:
             self.log.info("Model is loaded in 4-bit mode.")
+        else:
+            self.log.info("Model is not loaded in 4-bit mode.")
         return model.is_loaded_in_4bit
 
     def load_model_and_tokenizer(self, pad_token: str = "<pad>") -> tuple[Any, Any]:
@@ -97,12 +107,14 @@ class BaseModelHandler:
         )
         self.has_existing_peft_config(model)
         self.is_model_loaded_in_4bit(model)
+        self.log.info(f"Loading tokenizer: {self.config['model_name']}")
         tokenizer = AutoTokenizer.from_pretrained(
             self.config["model_name"],
             use_fast=True,
             trust_remote_code = True,
         )
         if tokenizer.pad_token is None:
+            self.log.info(f"Adding pad token: {pad_token}")
             tokenizer.add_special_tokens({"pad_token": pad_token})
             pad_id = tokenizer.pad_token_id
             model.resize_token_embeddings(len(tokenizer))

@@ -38,6 +38,9 @@ class Trainer(BaseModelHandler):
         super().__init__(config_path, debug)
         self.dataset_file: Path = dataset_file
         self.log.info(f"Initializing trainer with dataset: {self.dataset_file}")
+        self.model: Any = None
+        self.tokenizer: Any = None
+        self.peft_setup: Any = None
 
     def _transform_dataset(self, dataset: Any) -> Any:
         """Transform dataset into conversation format.
@@ -64,12 +67,15 @@ class Trainer(BaseModelHandler):
                 "text": example["text"],
             }
 
+        dataset_file = str(self.dataset_file)
+        self.log.debug(f"Loading dataset: {dataset_file}")
         dataset = load_dataset(
             "json",
-            data_files=str(self.dataset_file),
+            data_files=str(dataset_file),
             trust_remote_code=False,
             split = "train",
         )
+        self.log.debug("Transforming dataset")
         training_data = dataset.map(transform_format, remove_columns=dataset.column_names)
         return training_data
 
@@ -93,11 +99,11 @@ class Trainer(BaseModelHandler):
         model_family_stub = re.sub(r'\W+', '_', self.config['model_family'])
         model_adjustments = getattr(self, f"adjust_model_{model_family_stub}", None)
         if model_adjustments:
-            self.log.debug(f"Applying model adjustments for family {self.config['model_family']}")
+            self.log.info(f"Applying model adjustments for family {self.config['model_family']}")
             model = model_adjustments(model)
         tokenizer_adjustments = getattr(self, f"adjust_tokenizer_{model_family_stub}", None)
         if tokenizer_adjustments:
-            self.log.debug(f"Applying tokenizer adjustments for family {self.config['model_family']}")
+            self.log.info(f"Applying tokenizer adjustments for family {self.config['model_family']}")
             tokenizer = tokenizer_adjustments(tokenizer)
         self.model = model
         self.tokenizer = tokenizer
@@ -112,6 +118,7 @@ class Trainer(BaseModelHandler):
             use_bf16 = True
         elif fp16_supported:
             use_fp16 = True
+        self.log.debug(f"GPU capabilities: fp16={use_fp16}, bf16={use_bf16}")
         return use_fp16, use_bf16
 
     def train(self) -> dict[str, Any]:
@@ -130,6 +137,7 @@ class Trainer(BaseModelHandler):
             "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
         )
         Path(output_dir).mkdir(exist_ok=True, parents=True)
+        self.log.info(f"Results will be written to: {output_dir}")
 
 
         self.model.enable_input_require_grads() # A quirk of LoRA + gradient checkpointing
