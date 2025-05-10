@@ -433,12 +433,13 @@ class Chat(BaseModelHandler):
         model, tokenizer = self.load_model()
         self.messages = self.init_messages()
         prompt_session = self._setup_prompt_session()
+        label = f" {self.config['label']}" if "label" in self.config else ""
 
         # Display welcome header with rich formatting
         self.console.print(Panel(
             Text("Welcome to the AI Chat Interface", justify="center"),
             border_style="blue",
-            title="Raspberry Dataset Chat",
+            title=f"Raspberry Dataset Chat{label}",
             width=self.console.width,
             expand=True,
             padding=(1, 2),

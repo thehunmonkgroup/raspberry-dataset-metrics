@@ -1,3 +1,4 @@
 
+label: Gemma 3 4B
 model_name: "google/gemma-3-4b-it"
 model_family: "gemma-3"

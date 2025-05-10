@@ -1,3 +1,4 @@
+label: Qwen 2.5 7B
 model_name: "Qwen/Qwen2.5-7B-Instruct"
 model_family: "qwen-2.5"
 
