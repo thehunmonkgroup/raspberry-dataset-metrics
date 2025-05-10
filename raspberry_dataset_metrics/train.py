@@ -184,7 +184,7 @@ class Trainer(BaseModelHandler):
             # load_best_model_at_end=True,
             # eval_strategy="no",
             # metric_for_best_model="loss",
-            save_strategy="epoch",
+            save_strategy="no",
         )
         trainer = SFTTrainer(
             model = self.model,
@@ -197,6 +197,7 @@ class Trainer(BaseModelHandler):
         self.model.gradient_checkpointing_enable()  # discard activations
         self.log.info("Starting training")
         training_stats = trainer.train()
+        trainer.save_model(output_dir)
         self.log.info("Training completed")
         self.log.debug(f"Training stats: {training_stats}")
         return training_stats
