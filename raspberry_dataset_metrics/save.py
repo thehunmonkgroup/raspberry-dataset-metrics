@@ -41,15 +41,8 @@ class Saver(BaseModelHandler):
     def save(self) -> None:
         """Save the model and tokenizer.
         """
-        self.log.info("Loading base model...")
-        base_model = AutoModelForCausalLM.from_pretrained(self.config["model_name"])
-        self.log.info("Loading PEFT adapter...")
-        output_dir = self.config.get(
-            "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
-        )
-        peft_model = PeftModel.from_pretrained(base_model, output_dir)
-        self.log.info("Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(output_dir)
+        base_model, tokenizer = self.load_model_and_tokenizer()
+        peft_model = self.load_peft_model(base_model, tokenizer)
         self.log.info(f"Pushing tokenizer to Hugging Face Hub: {self.repo_name}")
         tokenizer.push_to_hub(self.repo_name)
         self.log.info(f"Pushing LoRA adapter to Hugging Face Hub: {self.repo_name}")

@@ -24,8 +24,6 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import clear
 
-from peft.peft_model import PeftModel
-
 import torch
 from transformers import TextStreamer
 
@@ -254,22 +252,7 @@ class Chat(BaseModelHandler):
         model, tokenizer = self.load_model_and_tokenizer()
 
         if self.fine_tune:
-            output_dir = self.config.get(
-                "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
-            )
-            checkpoint_path = Path(output_dir)
-            if not checkpoint_path.exists():
-                raise FileNotFoundError(
-                    f"Error: Checkpoint directory not found: {checkpoint_path}"
-                )
-            if not (checkpoint_path / "adapter_model.safetensors").exists():
-                raise FileNotFoundError(
-                    f"Error: No adapter model found in {checkpoint_path}"
-                )
-            self.log.info(
-                f"Loading adapter weights from checkpoint {checkpoint_path}"
-            )
-            model = PeftModel.from_pretrained(model, checkpoint_path)
+            self.load_peft_model(model, tokenizer)
         model.eval()
         torch.set_grad_enabled(False)
         try:

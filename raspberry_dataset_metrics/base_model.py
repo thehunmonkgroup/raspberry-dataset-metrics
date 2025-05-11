@@ -10,6 +10,7 @@ from typing import Any
 import torch
 
 from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig)
+from peft.peft_model import PeftModel
 
 from raspberry_dataset_metrics import constants
 from raspberry_dataset_metrics.logger import Logger
@@ -126,6 +127,28 @@ class BaseModelHandler:
             model.resize_token_embeddings(len(tokenizer))
             model.config.pad_token_id = pad_id
         return model, tokenizer
+
+
+    def load_peft_model(self, model: Any, tokenizer: Any) -> Any:
+        if not model or not tokenizer:
+            model, tokenizer = self.load_model_and_tokenizer()
+        output_dir = self.config.get(
+            "output_dir", f"outputs/{util.get_config_base_name(self.config_path)}"
+        )
+        checkpoint_path = Path(output_dir)
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(
+                f"Error: Checkpoint directory not found: {checkpoint_path}"
+            )
+        if not (checkpoint_path / "adapter_model.safetensors").exists():
+            raise FileNotFoundError(
+                f"Error: No adapter model found in {checkpoint_path}"
+            )
+        self.log.info(
+            f"Loading adapter weights from checkpoint {checkpoint_path}"
+        )
+        peft_model = PeftModel.from_pretrained(model, checkpoint_path)
+        return peft_model
 
     def generate_prompt(self, tokenizer: Any, chat: list[dict[str, str]], add_generation_prompt: bool = True) -> str:
         prompt = tokenizer.apply_chat_template(
