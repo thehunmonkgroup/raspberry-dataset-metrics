@@ -273,7 +273,8 @@ class Chat(BaseModelHandler):
         model.eval()
         torch.set_grad_enabled(False)
         try:
-            model = torch.compile(model)          # PyTorch ≥ 2.1
+            if not self.config.get("load_in_4bit", False):
+                model = torch.compile(model)
         except Exception:
             self.log.warning("Unable to compile model with torch.compile().")
             pass
