@@ -512,6 +512,7 @@ class Chat(BaseModelHandler):
                     streamer=text_streamer,
                     max_new_tokens=self.config["max_new_tokens"],
                     eos_token_id=tokenizer.eos_token_id,
+                    pad_token_id=tokenizer.pad_token_id,
                     use_cache=True,
                     temperature=self.config["temperature"],
                     min_p=self.config["min_p"],
