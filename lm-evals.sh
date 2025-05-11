@@ -25,7 +25,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,peft=$(pwd)/outputs/llama-3.1-8b,tokenizer=$(pwd)/outputs/llama-3.1-8b,dtype=bfloat16 \
+  --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct,peft=thehunmonkgroup/llama-3.1-8b-2025_05_11_18_16,tokenizer=thehunmonkgroup/llama-3.1-8b-2025_05_11_18_16,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
@@ -42,7 +42,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=unsloth/Mistral-7B-Instruct-v0.3,peft=$(pwd)/outputs/mistral-7b,tokenizer=$(pwd)/outputs/mistral-7b,dtype=bfloat16 \
+  --model_args pretrained=mistralai/Mistral-7B-Instruct-v0.3,peft=thehunmonkgroup/mistral-7b-2025_05_11_18_42,tokenizer=thehunmonkgroup/mistral-7b-2025_05_11_18_42,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
@@ -59,7 +59,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=microsoft/phi-4,peft=$(pwd)/outputs/phi-4,tokenizer=$(pwd)/outputs/phi-4,dtype=bfloat16 \
+  --model_args pretrained=microsoft/phi-4,peft=thehunmonkgroup/phi-4-2025_05_11_21_01,tokenizer=thehunmonkgroup/phi-4-2025_05_11_21_01,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
@@ -76,7 +76,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=Qwen/Qwen2.5-7B-Instruct,peft=$(pwd)/outputs/qwen-2.5-7b,tokenizer=$(pwd)/outputs/qwen-2.5-7b,dtype=bfloat16 \
+  --model_args pretrained=Qwen/Qwen2.5-7B-Instruct,peft=thehunmonkgroup/qwen-2.5-7b-2025_05_11_20_12,tokenizer=thehunmonkgroup/qwen-2.5-7b-2025_05_11_20_12,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
@@ -93,7 +93,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=google/gemma-3-4b-it,peft=$(pwd)/outputs/gemma-3-4b-it,tokenizer=$(pwd)/outputs/gemma-3-4b-it,dtype=bfloat16 \
+  --model_args pretrained=google/gemma-3-4b-it,peft=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,tokenizer=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
