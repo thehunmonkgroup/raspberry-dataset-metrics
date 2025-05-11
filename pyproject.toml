@@ -23,6 +23,7 @@ dependencies = [
     "fsspec",
     "gcsfs",
     "huggingface_hub",
+    "lm-eval",
     "ninja",
     "peft",
     "prompt-toolkit>=3",

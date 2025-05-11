@@ -8,7 +8,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=meta-llama/Llama-3.2-3B-Instruct,peft=$(pwd)/outputs/llama-3.2-3b,tokenizer=$(pwd)/outputs/llama-3.2-3b,dtype=bfloat16 \
+  --model_args pretrained=meta-llama/Llama-3.2-3B-Instruct,peft=thehunmonkgroup/llama-3.2-3b-2025_05_11_17_34,tokenizer=thehunmonkgroup/llama-3.2-3b-2025_05_11_17_34,dtype=bfloat16 \
   --tasks gsm8k \
   --device cuda:0 \
   --batch_size 8 \
