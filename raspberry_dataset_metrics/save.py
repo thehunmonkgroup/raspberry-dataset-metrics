@@ -35,7 +35,7 @@ class Saver(BaseModelHandler):
         self.repo_name: str = self.build_repo_name(repo_tag)
 
     def build_repo_name(self, repo_tag: str | None) -> str:
-        repo_tag = repo_tag or datetime.datetime.now().strftime('%Y-%m-%dT%H:%M')
+        repo_tag = repo_tag or datetime.datetime.now().strftime('%Y_%m_%d_%H_%M')
         return f"{util.get_config_base_name(self.config_path)}-{repo_tag}"
 
     def save(self) -> None:
