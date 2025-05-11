@@ -506,17 +506,23 @@ class Chat(BaseModelHandler):
                     eos_token=tokenizer.eos_token,
                     console=self.console
                 )
-                _ = model.generate(
-                    input_ids=inputs["input_ids"],
-                    attention_mask=inputs["attention_mask"],
-                    streamer=text_streamer,
-                    max_new_tokens=self.config["max_new_tokens"],
-                    eos_token_id=tokenizer.eos_token_id,
-                    pad_token_id=tokenizer.pad_token_id,
-                    use_cache=True,
-                    temperature=self.config["temperature"],
-                    min_p=self.config["min_p"],
-                )
+                do_sample = model.generation_config.do_sample
+                generation_kwargs = {
+                    "input_ids": inputs["input_ids"],
+                    "attention_mask": inputs["attention_mask"],
+                    "streamer": text_streamer,
+                    "max_new_tokens": self.config["max_new_tokens"],
+                    "eos_token_id": tokenizer.eos_token_id,
+                    "pad_token_id": tokenizer.pad_token_id,
+                    "use_cache": True,
+                    "do_sample": do_sample,
+                }
+                if do_sample:
+                    generation_kwargs.update({
+                        "temperature": self.config["temperature"],
+                        "min_p": self.config["min_p"],
+                    })
+                _ = model.generate(**generation_kwargs)
                 response = "".join(text_streamer.captured_text)
                 assistant_response = self.process_response(response)
                 if assistant_response:
