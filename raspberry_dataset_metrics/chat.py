@@ -274,6 +274,7 @@ class Chat(BaseModelHandler):
         torch.set_grad_enabled(False)
         try:
             if not self.config.get("load_in_4bit", False):
+                self.log.info("Compiling model with torch.compile().")
                 model = torch.compile(model)
         except Exception:
             self.log.warning("Unable to compile model with torch.compile().")
