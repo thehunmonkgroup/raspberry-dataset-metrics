@@ -42,6 +42,7 @@ include = ["raspberry_dataset_metrics"]
 [project.scripts]
 raspberry-train = "raspberry_dataset_metrics.train:main"
 raspberry-chat = "raspberry_dataset_metrics.chat:main"
+raspberry-save = "raspberry_dataset_metrics.save:main"
 
 [project.optional-dependencies]
 dev = [

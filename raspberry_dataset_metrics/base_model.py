@@ -36,6 +36,7 @@ class BaseModelHandler:
         self.log.debug(f"Configuration: {self.config}")
         self.model_settings: dict[str, Any] = self._get_model_family_settings()
         self.log.debug(f"Loaded model faily settings: {self.model_settings}")
+        self.label: str = self.config.get("label", self.config["model_name"])
         self._login_to_huggingface_hub()
 
     def _load_config(self, config_path: Path) -> dict[str, Any]:
