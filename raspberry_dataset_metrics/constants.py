@@ -80,7 +80,7 @@ MAX_NEW_TOKENS = 1024
 # Model-specific settings
 MODEL_FAMILIES = {
     "phi-4": {
-        "attn_implementation": "flash_attention_2",
+        "attn_implementation": "eager",
         "instruction_part": "<|im_start|>user<|im_sep|>",
         "response_part": "<|im_start|>assistant<|im_sep|>",
         "response_extraction_pattern": r".*<\|im_start\|>assistant<\|im_sep\|>([\s\S]*?)<\|im_end\|>$",
@@ -98,13 +98,7 @@ MODEL_FAMILIES = {
         "response_extraction_pattern": r"\[/INST\]\s*([\s\S]*?)</s>$",
     },
     "qwen-2.5": {
-        "attn_implementation": "flash_attention_2",
-        "instruction_part": "<|im_start|>user\n",
-        "response_part": "<|im_start|>assistant\n",
-        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
-    },
-    "qwen-3": {
-        "attn_implementation": "flash_attention_2",
+        "attn_implementation": "sdpa",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
