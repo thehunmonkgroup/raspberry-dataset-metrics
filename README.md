@@ -88,6 +88,7 @@ Configuration is done via YAML files in the `configs` directory. Each config spe
 ### Example Configuration
 
 ```yaml
+label: "LLama 3.1 8B"
 model_name: "meta-llama/Llama-3.1-8B-Instruct"
 model_family: "llama-3.1"
 warmup_steps: 5
