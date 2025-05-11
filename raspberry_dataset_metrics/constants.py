@@ -7,7 +7,7 @@ These can be overridden by values in config files.
 # Model parameters
 MAX_SEQ_LENGTH = 1024  # Context window size
 LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
-BNB_4BIT_COMPUTE_DTYPE = "float16"
+BNB_4BIT_COMPUTE_DTYPE = "bfloat16"
 BNB_4BIT_QUANT_TYPE = "nf4"
 BNB_4BIT_USE_DOUBLE_QUANT = True
 DEVICE_MAP = "auto"
