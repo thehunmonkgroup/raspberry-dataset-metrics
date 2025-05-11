@@ -107,7 +107,8 @@ class BaseModelHandler:
             device_map = self.config["device_map"],
             attn_implementation = attn_implementation,
         )
-        self.log.info(f"Loaded model: {model}")
+        self.log.info(f"Loaded model: {self.config['model_name']}, attn_implementation: {attn_implementation}")
+        self.log.info(f"Quantization config: load_in_4bit: {self.config['load_in_4bit']}, quant_type: {self.config['bnb_4bit_quant_type']}, use_double_quant: {self.config['bnb_4bit_use_double_quant']}, compute_dtype: {self.config['bnb_4bit_compute_dtype']}")
         self.has_existing_peft_config(model)
         self.is_model_loaded_in_4bit(model)
         self.log.info(f"Loading tokenizer: {self.config['model_name']}")
