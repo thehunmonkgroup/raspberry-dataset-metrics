@@ -432,6 +432,8 @@ class Chat(BaseModelHandler):
         """
         self.log.info("Starting chat interface")
         model, tokenizer = self.load_model()
+        do_sample = model.generation_config.do_sample
+        self.log.info(f"Sampling enabled: {do_sample}")
         self.messages = self.init_messages()
         prompt_session = self._setup_prompt_session()
         label = f" {self.config['label']}" if "label" in self.config else ""
@@ -507,7 +509,6 @@ class Chat(BaseModelHandler):
                     eos_token=tokenizer.eos_token,
                     console=self.console
                 )
-                do_sample = model.generation_config.do_sample
                 generation_kwargs = {
                     "input_ids": inputs["input_ids"],
                     "attention_mask": inputs["attention_mask"],
@@ -516,6 +517,8 @@ class Chat(BaseModelHandler):
                     "eos_token_id": tokenizer.eos_token_id,
                     "pad_token_id": tokenizer.pad_token_id,
                     "use_cache": True,
+                    "remove_invalid_values": True,    # adds InfNanRemoveLogitsProcessor
+                    "renormalize_logits": True,       # fixes sums that drift from 1
                     "do_sample": do_sample,
                 }
                 if do_sample:

@@ -73,8 +73,8 @@ SYSTEM_MESSAGE = "You are a helpful assistant."
 # """
 
 # Generation parameters
-TEMPERATURE = 0.1
-MIN_P = 0.1
+TEMPERATURE = 0.8
+MIN_P = None
 MAX_NEW_TOKENS = 1024
 
 # Model-specific settings

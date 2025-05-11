@@ -107,6 +107,7 @@ class BaseModelHandler:
             quantization_config = bnb_setup,
             device_map = self.config["device_map"],
             attn_implementation = attn_implementation,
+            torch_dtype = bnb_4bit_compute_dtype,
         )
         self.log.info(f"Loaded model: {self.config['model_name']}, attn_implementation: {attn_implementation}")
         self.log.info(f"Quantization config: load_in_4bit: {self.config['load_in_4bit']}, quant_type: {self.config['bnb_4bit_quant_type']}, use_double_quant: {self.config['bnb_4bit_use_double_quant']}, compute_dtype: {self.config['bnb_4bit_compute_dtype']}")
