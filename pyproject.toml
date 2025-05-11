@@ -21,6 +21,7 @@ dependencies = [
     "bitsandbytes",
     "datasets",
     "fsspec",
+    "flash-attn",
     "gcsfs",
     "huggingface_hub",
     "peft",
