@@ -80,31 +80,37 @@ MAX_NEW_TOKENS = 1024
 # Model-specific settings
 MODEL_FAMILIES = {
     "phi-4": {
-        "chat_template": "phi-4",
+        "attn_implementation": "flash_attention_2",
         "instruction_part": "<|im_start|>user<|im_sep|>",
         "response_part": "<|im_start|>assistant<|im_sep|>",
         "response_extraction_pattern": r".*<\|im_start\|>assistant<\|im_sep\|>([\s\S]*?)<\|im_end\|>$",
     },
     "llama-3.1": {
-        "chat_template": "llama-3.1",
+        "attn_implementation": "sdpa",
         "instruction_part": "<|start_header_id|>user<|end_header_id|>\n\n",
         "response_part": "<|start_header_id|>assistant<|end_header_id|>\n\n",
         "response_extraction_pattern": r".*<\|start_header_id\|>assistant<\|end_header_id\|>\n\n([\s\S]*?)<\|eot_id\|>$",
     },
     "mistral": {
-        "chat_template": "chatml",
+        "attn_implementation": "eager",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r"\[/INST\]\s*([\s\S]*?)</s>$",
     },
     "qwen-2.5": {
-        "chat_template": "qwen-2.5",
+        "attn_implementation": "flash_attention_2",
+        "instruction_part": "<|im_start|>user\n",
+        "response_part": "<|im_start|>assistant\n",
+        "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
+    },
+    "qwen-3": {
+        "attn_implementation": "flash_attention_2",
         "instruction_part": "<|im_start|>user\n",
         "response_part": "<|im_start|>assistant\n",
         "response_extraction_pattern": r".*<\|im_start\|>assistant\n([\s\S]*?)<\|im_end\|>$",
     },
     "gemma-3": {
-        "chat_template": "gemma-3",
+        "attn_implementation": "eager",
         "instruction_part": "<start_of_turn>user\n",
         "response_part": "<start_of_turn>model\n",
         "response_extraction_pattern": r".*<start_of_turn>model\n([\s\S]*?)$",

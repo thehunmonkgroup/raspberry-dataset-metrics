@@ -100,11 +100,14 @@ class BaseModelHandler:
                                     bnb_4bit_quant_type = self.config['bnb_4bit_quant_type'],
                                     bnb_4bit_use_double_quant = self.config['bnb_4bit_use_double_quant'],
                                     bnb_4bit_compute_dtype = bnb_4bit_compute_dtype)
+        attn_implementation = self.config.get("attn_implementation", self.model_settings["attn_implementation"])
         model = AutoModelForCausalLM.from_pretrained(
             self.config["model_name"],
             quantization_config = bnb_setup,
             device_map = self.config["device_map"],
+            attn_implementation = attn_implementation,
         )
+        self.log.info(f"Loaded model: {model}")
         self.has_existing_peft_config(model)
         self.is_model_loaded_in_4bit(model)
         self.log.info(f"Loading tokenizer: {self.config['model_name']}")
