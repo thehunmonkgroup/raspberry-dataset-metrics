@@ -13,6 +13,17 @@ Supports fine-tuning and interacting with large language models using standard H
 - Modular design with model-specific settings abstracted away
 
 
+## Installation
+
+```bash
+# Install from source
+pip install .
+
+# Install with development dependencies
+pip install ".[dev]"
+```
+
+
 ## Setup
 
 A [HuggingFace API token](https://huggingface.co/settings/tokens) is required, as some models are gated.
@@ -26,17 +37,6 @@ export HUGGINGFACEHUB_API_TOKEN="hf_yourhuggingfacetoken"
 ```
 
 If not set, you will be prompted for the token.
-
-
-## Installation
-
-```bash
-# Install from source
-pip install .
-
-# Install with development dependencies
-pip install ".[dev]"
-```
 
 
 ## Usage
