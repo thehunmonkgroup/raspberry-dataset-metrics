@@ -121,7 +121,6 @@ class BaseModelHandler:
             model.config.pad_token_id = pad_id
         return model, tokenizer
 
-
     def generate_prompt(self, tokenizer: Any, chat: list[dict[str, str]], add_generation_prompt: bool = True) -> str:
         prompt = tokenizer.apply_chat_template(
             chat,
