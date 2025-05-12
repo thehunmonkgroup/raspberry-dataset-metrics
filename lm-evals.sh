@@ -92,8 +92,9 @@ lm-eval --model hf \
   --output_path ./results-gemma-3-4b-it \
   --log_samples
 
+# For now, requires using locally cached files because Gemma 3 model config needs to be hacked to include proper vocab_size.
 lm-eval --model hf \
-  --model_args pretrained=google/gemma-3-4b-it,peft=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,tokenizer=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,dtype=bfloat16 \
+  --model_args pretrained=google/gemma-3-4b-it,peft=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,tokenizer=thehunmonkgroup/gemma-4b-it-2025_05_11_22_00,dtype=bfloat16,local_files_only=True \
   --tasks mmlu,gsm8k \
   --device cuda:0 \
   --batch_size 8 \

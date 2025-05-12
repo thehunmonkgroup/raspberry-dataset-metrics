@@ -3,6 +3,7 @@
 Base class for model handling, providing shared functionality for training and chat interfaces.
 """
 
+import re
 import logging
 import yaml
 from pathlib import Path
@@ -149,6 +150,11 @@ class BaseModelHandler:
         )
         peft_model = PeftModel.from_pretrained(model, checkpoint_path)
         return peft_model
+
+
+    def get_model_family_stub(self) -> str:
+        model_family_stub = re.sub(r'\W+', '_', self.config['model_family'])
+        return model_family_stub
 
     def generate_prompt(self, tokenizer: Any, chat: list[dict[str, str]], add_generation_prompt: bool = True) -> str:
         prompt = tokenizer.apply_chat_template(

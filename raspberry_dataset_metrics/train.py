@@ -5,7 +5,6 @@ Loads configuration from YAML files and abstracts model-specific logic.
 """
 
 import os
-import re
 import argparse
 import pprint
 from pathlib import Path
@@ -16,13 +15,11 @@ import torch
 from datasets import load_dataset
 from trl import SFTTrainer, SFTConfig
 from peft import LoraConfig, get_peft_model
-from transformers import TrainerCallback
+from transformers import TrainerCallback, AutoConfig
+from huggingface_hub import snapshot_download
 
 from raspberry_dataset_metrics import util
 from raspberry_dataset_metrics.base_model import BaseModelHandler
-
-
-
 
 
 class SaveTokenizerCallback(TrainerCallback):
@@ -113,7 +110,7 @@ class Trainer(BaseModelHandler):
             task_type = "CAUSAL_LM",
             inference_mode=False,
         )
-        model_family_stub = re.sub(r'\W+', '_', self.config['model_family'])
+        model_family_stub = self.get_model_family_stub()
         model_adjustments = getattr(self, f"adjust_model_{model_family_stub}", None)
         if model_adjustments:
             self.log.info(f"Applying model adjustments for family {self.config['model_family']}")
@@ -199,6 +196,11 @@ class Trainer(BaseModelHandler):
         training_stats = trainer.train()
         trainer.save_model(output_dir)
         self.log.info("Training completed")
+        model_family_stub = self.get_model_family_stub()
+        post_training_adjustments = getattr(self, f"post_training_adjustment_{model_family_stub}", None)
+        if post_training_adjustments:
+            self.log.info(f"Applying post-training adjustments for family {self.config['model_family']}")
+            post_training_adjustments()
         self.log.debug(f"Training stats: {training_stats}")
         return training_stats
 
@@ -210,6 +212,20 @@ class Trainer(BaseModelHandler):
     def adjust_tokenizer_llama_3_1(self, tokenizer: Any) -> Any:
         tokenizer.padding_side = "left"
         return tokenizer
+
+    def post_training_adjustment_gemma_3(self) -> None:
+        vocab_size = len(self.tokenizer)
+        config = AutoConfig.from_pretrained(
+            self.config["model_name"],
+            local_files_only=True,
+        )
+        config.vocab_size = vocab_size
+        snapshot_dir = snapshot_download(
+            repo_id=self.config["model_name"],
+            local_files_only=True,
+        )
+        config.save_pretrained(snapshot_dir)
+
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments.
