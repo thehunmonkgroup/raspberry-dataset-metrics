@@ -7,6 +7,14 @@ doc_to_target: |
   <reasoning>{{ answer.split('#### ')[0].strip() }}</reasoning>
   <output>#### {{ answer.split('#### ')[1].strip() }}</output>
 
+generation_kwargs:
+  until:
+    - "Question:"
+    - "</s>"
+    - "<|im_end|>"
+  do_sample: false
+  max_length: 4096
+
 filter_list:
   # Mirror the base strict-match filter, but scoped inside <output>…</output>
   - name: strict-match
