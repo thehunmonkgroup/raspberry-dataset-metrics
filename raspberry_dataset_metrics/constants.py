@@ -5,7 +5,7 @@ These can be overridden by values in config files.
 """
 
 # Model parameters
-MAX_SEQ_LENGTH = 1024  # Context window size
+MAX_SEQ_LENGTH = 4096  # Context window size
 LOAD_IN_4BIT = True  # Whether to use 4-bit quantization
 BNB_4BIT_COMPUTE_DTYPE = "bfloat16"
 BNB_4BIT_QUANT_TYPE = "nf4"
@@ -75,7 +75,7 @@ SYSTEM_MESSAGE = "You are a helpful assistant."
 # Generation parameters
 TEMPERATURE = 0.8
 MIN_P = None
-MAX_NEW_TOKENS = 1024
+MAX_NEW_TOKENS = 4096
 
 # Model-specific settings
 MODEL_FAMILIES = {
