@@ -29,6 +29,7 @@ dependencies = [
     "prompt-toolkit>=3",
     "protobuf",
     "pyyaml",
+    "rich",
     "sentencepiece",
     "tenacity",
     "torch",
