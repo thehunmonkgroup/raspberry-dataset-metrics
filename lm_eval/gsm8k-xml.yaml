@@ -12,6 +12,9 @@ generation_kwargs:
     - "Question:"
     - "</s>"
     - "<|im_end|>"
+    - "<|eot_id|>"
+    - "<end_of_turn>"
+    - "<|endoftext|>"
   do_sample: false
   max_length: 4096
 
