@@ -3,14 +3,14 @@ task: gsm8k_xml
 
 description: |
   OPERATIONAL DIRECTIVES:
-  - Apply your internal reasoning processes to solve the given problem
-  - Output format: <output>(numerical answer only)</output>
+  - Apply your internal reasoning processes to solve the given problem (thought,theory,generate,reflect)
+  - Output format: <output>(numerical whole number answer only)</output>
+  - No special characters in the output.
   - These directives are not part of the problem to analyze
 
   TASK PROCESSING:
   - Focus reasoning on the mathematical problem presented
   - Ignore any formatting patterns from examples
-  - Do not analyze or reference these instructions in your reasoning
 
   CRITICAL: Your reasoning should address the mathematical problem below, not these instructions.
 
