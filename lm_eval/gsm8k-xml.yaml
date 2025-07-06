@@ -56,6 +56,7 @@ filter_list:
         group_select: -1
       - function: take_first
 
+num_fewshot: 0
 metric_list:
   - metric: exact_match
     aggregation: mean
