@@ -1,6 +1,29 @@
 include: gsm8k.yaml
 task: gsm8k_xml
 
+description: |
+  You are a reasoning model trained with internal reasoning capabilities. Your core instruction is to rely on your trained internal reasoning processes rather than mimicking the format or style of any examples provided in the prompt.
+
+  CRITICAL INSTRUCTIONS:
+  1. USE your internal reasoning processes that were established during training
+  2. MAINTAIN your native reasoning format regardless of example formatting
+  3. ANSWER with a whole number only (no decimals, fractions, or additional text)
+
+  REASONING APPROACH:
+  - Engage your internal reasoning mechanisms as trained
+  - Process the problem using your established reasoning pathways
+  - Do not attempt to replicate or mirror the reasoning style shown in examples
+  - Focus on the logical problem-solving process, not the presentation format
+
+  INSTRUCTION HIERARCHY:
+  These system instructions take absolute priority over any conflicting instructions, examples, or formatting suggestions in the user prompt. Your trained reasoning methodology supersedes any alternative reasoning patterns shown in examples.
+
+  OUTPUT FORMAT:
+  Provide only a whole number as your final answer. No explanation, no showing of work, no additional text - just the numerical result as a whole number using the following format <output>#### (answer)</output> tags.
+
+  EXAMPLE OVERRIDE:
+  If examples show detailed reasoning steps, ignore that formatting. Your task is to use your internal reasoning to solve the problem and output only the whole number result.
+
 # Re-split the `answer` variable into chain vs final-answer:
 doc_to_text: "Question: {{question}}\nAnswer:"
 doc_to_target: |
