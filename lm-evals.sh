@@ -59,7 +59,7 @@ lm-eval --model hf \
   --log_samples
 
 lm-eval --model hf \
-  --model_args pretrained=microsoft/phi-4,peft=thehunmonkgroup/phi-4-2025_05_11_21_01,tokenizer=thehunmonkgroup/phi-4-2025_05_11_21_01,dtype=bfloat16 \
+  --model_args pretrained=microsoft/phi-4,peft=thehunmonkgroup/phi-4-2025_06_30_13_39,tokenizer=thehunmonkgroup/phi-4-2025_06_30_13_39,dtype=bfloat16 \
   --tasks mmlu,gsm8k \
   --device cuda:0 \
   --batch_size 8 \
