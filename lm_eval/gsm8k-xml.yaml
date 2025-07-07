@@ -55,7 +55,7 @@ metric_list:
     ignore_punctuation: false
     # Ignore <reasoning> and <output> tags, as well as newlines
     regexes_to_ignore:
-      - "<\\/?reasoning>.*?<\\/reasoning>"
+      - "(?s)<\\/?reasoning>.*?<\\/reasoning>"
       - "<\\/?output>"
       - "\\n|\\r\\n|\\r"
       - ","
